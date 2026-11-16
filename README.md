@@ -1,6 +1,6 @@
 # DMus QE Listening List
 
-A static listening library for 160 works, hosted on GitHub Pages. The Medieval pilot adds recording previews and YouTube/Spotify search links. Supabase supplies the existing shared progress, email accounts, and per-work comments in a separate dialog.
+A static listening library for 160 works, hosted on GitHub Pages. The Medieval pilot adds recording previews and YouTube/Spotify search links. Supabase supplies shared progress, email accounts, note avatars, nicknames, and threaded per-work comments in a separate dialog.
 
 ## Local development
 
@@ -20,7 +20,8 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 - `assets/media.js`: the five Medieval lookup queries, recording matching, player, and external links. Add a numbered catalog entry to extend the pilot.
 - `assets/library.js`: period navigation, global search, work rows, and notes.
 - `assets/app.js`: existing shared progress, account flows, and application startup.
-- `assets/comments.js`: separate per-work discussion dialog and authenticated comment requests.
+- `assets/account.js` and `assets/avatars.js`: profile menu, nickname updates, and the ten locally drawn note avatars.
+- `assets/comments.js`: separate per-work discussion dialog, threaded replies, and authenticated comment requests.
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 
@@ -37,10 +38,10 @@ Browser tests use `CHROME_PATH` if set, then a system Chromium, then Playwright'
 
 ## Deployment
 
-Push static files to `main`. In GitHub **Settings → Pages**, select **Deploy from a branch → main → /(root)**. The expected production URL is <https://zchang592.github.io/qelisteninglist/>. Run the database migration separately in Supabase before expecting comments to persist.
+Push static files to `main`. In GitHub **Settings → Pages**, select **Deploy from a branch → main → /(root)**. The expected production URL is <https://zchang592.github.io/qelisteninglist/>. Run the database migrations separately in Supabase before expecting comments and replies to persist.
 
 ## Design and assets
 
 The redesign follows [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)'s `design-taste-frontend` guidance for typography, spacing, restrained motion, real platform icons, keyboard access, and browser verification. This is a working catalog app: period navigation and readable work rows take precedence over the skill's company-landing-page sections and full-screen effects.
 
-Instrument Serif and DM Sans are distributed under the SIL Open Font License; licenses are in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. No recordings are hosted in this repository.
+Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. No recordings are hosted in this repository.

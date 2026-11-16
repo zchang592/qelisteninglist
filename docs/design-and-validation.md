@@ -2,6 +2,8 @@
 
 The redesign uses [design-taste-frontend](https://github.com/Leonxlnx/taste-skill/tree/main/skills/taste-skill) as its design guidance. The original page was inspected in Chromium before editing. This is a functional music catalog, so the reading list, period navigation, and discussion forms determine the layout. Company-site requirements such as full-screen marketing sections, promotional artwork, and scroll effects are intentionally not used.
 
+The later discussion update replaces the display serif and body font with locally served Plus Jakarta Sans and a Chinese system sans-serif. The account menu and comment threads use ten locally drawn note-character avatars, including keyboard and touch access. The measurements below describe the preceding initial redesign; run the current test suite and visual checks after later changes.
+
 The visual system uses a warm paper ground, deep green actions, Instrument Serif headings, DM Sans text, a consistent radius scale, short hover/press responses, native modal dialogs, and reduced-motion support. Fonts are local. YouTube and Spotify SVGs are the actual Simple Icons assets. No reviews, recordings, usage numbers, or people are invented for the visual design.
 
 ## Automated verification

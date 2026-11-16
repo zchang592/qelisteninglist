@@ -7,6 +7,7 @@ let db;
 const first='11111111-1111-4111-8111-111111111111';
 const second='22222222-2222-4222-8222-222222222222';
 const migration=await readFile(new URL('../supabase/migrations/202611160001_listening_comments.sql',import.meta.url),'utf8');
+const threadsMigration=await readFile(new URL('../supabase/migrations/202611160002_threads_and_avatars.sql',import.meta.url),'utf8');
 before(async()=>{
   db=new PGlite();
   await db.exec(`create role anon; create role authenticated;
@@ -20,6 +21,7 @@ before(async()=>{
       ('${first}','{"display_name":"First listener"}'),
       ('${second}','{"display_name":"Second listener"}');`);
   await db.exec(migration);
+  await db.exec(threadsMigration);
 });
 after(async()=>{await db?.close();});
 async function role(name,id='') {
@@ -28,9 +30,10 @@ async function role(name,id='') {
   await db.exec(`set role ${name}`);
 }
 
-test('migration can be reapplied and visitors can read, but cannot post',async()=>{
+test('both migrations can be reapplied in order and visitors can read, but cannot post',async()=>{
   await role('postgres');
   await db.exec(migration);
+  await db.exec(threadsMigration);
   await role('anon');
   assert.equal((await db.query('select count(*)::int as n from public.listening_comments')).rows[0].n,0);
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body) values(1,'anonymous')"),/permission denied/i);
@@ -50,12 +53,11 @@ test('authenticated client cannot forge another author, display name, or timesta
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body,author_name) values(2,'forged','Someone else')"),/permission denied/i);
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body,created_at) values(2,'forged','2000-01-01')"),/permission denied/i);
 });
-test('posting is rate limited, and empty/oversized/out-of-range posts fail',async()=>{
+test('consecutive posts work, and empty/oversized/out-of-range posts fail',async()=>{
   await role('authenticated',first);
-  await assert.rejects(db.query("insert into public.listening_comments(track_id,body) values(1,'too soon')"),/15 秒/);
-  await role('postgres');
-  await db.exec("update public.listening_comments set created_at=now()-interval '1 hour'");
-  await role('authenticated',first);
+  const another=await db.query("insert into public.listening_comments(track_id,body) values(1,'another comment') returning id");
+  assert.ok(another.rows[0].id);
+  await db.query('delete from public.listening_comments where id=$1',[another.rows[0].id]);
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body) values(0,'invalid track')"),/check constraint/i);
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body) values(161,'invalid track')"),/check constraint/i);
   await assert.rejects(db.query("insert into public.listening_comments(track_id,body) values(1,E' \n\t ')"),/check constraint/i);

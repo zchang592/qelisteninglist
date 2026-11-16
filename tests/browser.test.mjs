@@ -45,11 +45,12 @@ function recordings(term) {
     {trackName:'Wrong work',artistName:'Other',previewUrl:'https://audio-ssl.mzstatic.com/wrong.mp3'}
   ]};
 }
-async function app(t,{admin=false,signedIn=false,comments=[],missing=false,postError=false,mediaError=false,autoConfirm=false,refreshFails=false}={}) {
+async function app(t,{admin=false,signedIn=false,comments=[],missing=false,legacy=false,postError=false,profileError=false,mediaError=false,autoConfirm=false,refreshFails=false}={}) {
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
   t.after(()=>context.close());
   const requests=[];const errors=[];
-  const state={comments:[...comments],posts:[],progress:[],signups:[],media:[],deleted:[],refreshes:0};
+  const state={comments:structuredClone(comments),posts:[],progress:[],signups:[],media:[],deleted:[],refreshes:0,
+    user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[]};
   await context.route('**/*',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.origin===origin){await route.continue();return;}
@@ -58,31 +59,55 @@ async function app(t,{admin=false,signedIn=false,comments=[],missing=false,postE
       const json=async(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body),headers:{'access-control-allow-origin':'*'}});
       if(url.pathname==='/auth/v1/token') {
         if(url.searchParams.get('grant_type')==='refresh_token') {state.refreshes++;if(refreshFails)return json({msg:'Invalid refresh token'},400);}
-        return json(session);
+        return json({...session,user:state.user});
       }
-      if(url.pathname==='/auth/v1/user')return json(USER);
-      if(url.pathname==='/auth/v1/signup'){state.signups.push(request.postDataJSON());return json(autoConfirm?session:{user:USER});}
+      if(url.pathname==='/auth/v1/user'){
+        if(request.method()==='PUT'){
+          if(profileError)return json({message:'资料暂时无法保存'},400);
+          const payload=request.postDataJSON();state.userUpdates.push(payload);
+          state.user={...state.user,user_metadata:{...state.user.user_metadata,...payload.data}};
+          state.comments=state.comments.map(row=>row.user_id===USER.id?{...row,author_name:state.user.user_metadata.display_name,avatar_key:state.user.user_metadata.avatar_key}:row);
+        }
+        return json(state.user);
+      }
+      if(url.pathname==='/auth/v1/signup'){
+        const payload=request.postDataJSON();state.signups.push(payload);
+        if(autoConfirm){state.user={...state.user,user_metadata:{...state.user.user_metadata,...payload.data}};return json({...session,user:state.user});}
+        return json({user:USER});
+      }
       if(url.pathname==='/auth/v1/logout')return json({});
       if(url.pathname.endsWith('/rpc/am_i_qe_admin'))return json(admin);
       if(url.pathname.endsWith('/rpc/claim_qe_admin'))return json({});
+      if(url.pathname.endsWith('/rpc/qe_comment_reply_counts')){
+        const roots=request.postDataJSON().root_ids;
+        return json(roots.map(root_id=>({root_id,reply_count:state.comments.filter(row=>row.parent_id===root_id).length})));
+      }
       if(url.pathname.endsWith('/listening_progress')){
         if(request.method()==='POST'){state.progress.push(request.postDataJSON());return route.fulfill({status:201,body:''});}
         return json([{track_id:1,status:1,note:'Listen for monophonic texture.'}]);
       }
       if(url.pathname.endsWith('/listening_comments')){
         if(missing)return json({code:'PGRST205',message:'Table not found'},404);
+        if(legacy && request.method()==='GET' && url.searchParams.get('select')?.includes('parent_id'))return json({code:'42703',message:'column parent_id does not exist'},400);
         if(request.method()==='POST'){
-          if(postError)return json({message:'请稍等 15 秒再发布下一条评论'},400);
+          if(postError)return json({message:'暂时无法发布'},400);
           const payload=request.postDataJSON();state.posts.push(payload);
-          const row={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',track_id:payload.track_id,body:payload.body,user_id:USER.id,author_name:USER.user_metadata.display_name,created_at:new Date().toISOString()};
+          const row={id:`aaaaaaaa-aaaa-4aaa-8aaa-${String(state.posts.length).padStart(12,'0')}`,track_id:payload.track_id,body:payload.body,
+            parent_id:payload.parent_id || null,reply_to_id:payload.reply_to_id || null,user_id:USER.id,author_name:state.user.user_metadata.display_name,
+            avatar_key:state.user.user_metadata.avatar_key || 'note-03',created_at:new Date().toISOString()};
           state.comments.unshift(row);return json([row],201);
         }
         if(request.method()==='DELETE'){
           const id=url.searchParams.get('id')?.slice(3);state.deleted.push(id);
-          const removed=state.comments.filter(row=>row.id===id);state.comments=state.comments.filter(row=>row.id!==id);return json(removed);
+          const removed=state.comments.filter(row=>row.id===id);state.comments=state.comments.filter(row=>row.id!==id).map(row=>({...row,parent_id:row.parent_id===id?null:row.parent_id,reply_to_id:row.reply_to_id===id?null:row.reply_to_id}));return json(removed);
         }
         const id=url.searchParams.get('track_id')?.slice(3);
         let result=state.comments.filter(row=>!id || row.track_id===Number(id));
+        const parent=url.searchParams.get('parent_id');
+        if(parent==='is.null')result=result.filter(row=>!row.parent_id);
+        else if(parent?.startsWith('eq.'))result=result.filter(row=>row.parent_id===parent.slice(3));
+        const ascending=url.searchParams.get('order')?.startsWith('created_at.asc');
+        result.sort((a,b)=>(ascending?1:-1)*(a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)));
         if(url.searchParams.get('or'))result=result.slice(20);
         return json(result.slice(0,21));
       }
@@ -168,6 +193,7 @@ test('public signup submits nickname and production/local redirect, and asks for
   await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
   await expect(page.locator('#authMessage')).toContainText('确认邮件');
   assert.equal(state.signups[0].data.display_name,'New listener');
+  assert.match(state.signups[0].data.avatar_key,/^note-(0[1-9]|10)$/);
   assert.equal(state.signups[0].email,'listener@example.com');
   await expect(page.locator('#modeLabel')).toHaveText('访客');await expect(page.locator('#activationBlock')).toBeHidden();
   assert.equal(await page.locator('#signupPassword').inputValue(),'');
@@ -177,7 +203,114 @@ test('ordinary signup with immediate session enables discussion without administ
   await page.locator('#adminToggle').click();await page.locator('#signupTab').click();
   await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
   await expect(page.locator('#modeLabel')).toHaveText('已登录');await expect(page.locator('#authMessage')).toContainText('参与曲目讨论');
+  await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar',/^note-(0[1-9]|10)$/);
   await expect(page.locator('#exportBtn')).toBeHidden();assert.equal(await page.locator('#track-1 .state-btn').isDisabled(),true);
+});
+test('hover account menu changes the avatar and nickname, persisting across a reload and existing comments',async t=>{
+  const old={id:'11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa',track_id:1,user_id:USER.id,author_name:'Test listener',avatar_key:'note-03',body:'Existing comment',created_at:'2026-11-16T00:00:00Z'};
+  const {page,state}=await app(t,{signedIn:true,comments:[old]});
+  await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
+  await page.locator('#avatarTrigger').hover();
+  await expect(page.locator('#avatarPopover')).toBeVisible();
+  await expect(page.locator('.avatar-option')).toHaveCount(10);
+  await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
+  await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
+  await expect(page.locator('#profileMessage')).toHaveText('头像已更新');
+  await page.locator('#profileName').fill('New name');await page.locator('#profileSave').click();
+  await expect(page.locator('#profileMessage')).toHaveText('昵称已更新');
+  assert.equal(state.userUpdates.length,2);
+  assert.equal(state.user.user_metadata.avatar_key,'note-02');assert.equal(state.user.user_metadata.display_name,'New name');
+  await page.reload();await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  await expect(page.locator('.comment-author')).toHaveText('New name');
+  await expect(page.locator('.comment-avatar')).toHaveAttribute('data-avatar','note-02');
+});
+test('failed avatar updates retain the previous selection and show an actionable error',async t=>{
+  const {page,state}=await app(t,{signedIn:true,profileError:true});
+  await page.locator('#avatarTrigger').hover();await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
+  await expect(page.locator('#profileMessage')).toContainText('资料暂时无法保存');
+  await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
+  assert.equal(state.userUpdates.length,0);
+});
+test('account menu works on a narrow screen with touch-sized controls and keyboard dismissal',async t=>{
+  const {page}=await app(t,{signedIn:true});
+  await page.setViewportSize({width:320,height:700});
+  await page.locator('#avatarTrigger').click();
+  await expect(page.locator('#avatarPopover')).toBeVisible();
+  const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
+  await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
+  await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
+  await expect(page.locator('#avatarTrigger')).toBeFocused();
+  await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
+});
+test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
+  const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
+  const child='aaaaaaaa-aaaa-4aaa-8aaa-000000000002';
+  const comments=[
+    {id:root,track_id:1,user_id:'22222222-2222-4222-8222-222222222222',author_name:'First listener',avatar_key:'note-06',body:'Root comment',created_at:'2026-11-15T00:00:00Z',parent_id:null},
+    {id:child,track_id:1,user_id:'33333333-3333-4333-8333-333333333333',author_name:'Second listener',avatar_key:'note-09',body:'A nested reply',created_at:'2026-11-15T00:01:00Z',parent_id:root,reply_to_id:root},
+  ];
+  const {page,state}=await app(t,{signedIn:true,comments});
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  await expect(page.locator('#commentsList > .comment-item')).toHaveCount(1);
+  await expect(page.getByText('A nested reply')).toBeHidden();
+  await page.getByRole('button',{name:/查看 1 条回复/}).click();
+  await expect(page.getByText('A nested reply')).toBeVisible();
+  await page.getByRole('button',{name:'回复 Second listener 的评论'}).click();
+  await expect(page.getByRole('textbox',{name:'回复 Second listener'})).toBeFocused();
+  await page.getByRole('textbox',{name:'回复 Second listener'}).fill('I hear that too.');
+  await page.getByRole('button',{name:'发布回复'}).click();
+  await expect(page.getByText('I hear that too.')).toBeVisible();
+  await expect(page.locator('.reply-mention')).toContainText('Second listener');
+  assert.deepEqual(state.posts,[{track_id:1,body:'I hear that too.',parent_id:root,reply_to_id:child}]);
+  await page.locator('#commentBody').fill('Another thought');await page.locator('#postComment').click();
+  await expect.poll(()=>state.posts.length).toBe(2);
+});
+test('guests can read replies and are invited to sign in before replying',async t=>{
+  const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
+  const child='aaaaaaaa-aaaa-4aaa-8aaa-000000000002';
+  const comments=[
+    {id:root,track_id:1,user_id:'other',author_name:'A listener',body:'Root',created_at:'2026-11-15T00:00:00Z',parent_id:null},
+    {id:child,track_id:1,user_id:'other',author_name:'A listener',body:'Reply',created_at:'2026-11-15T00:01:00Z',parent_id:root,reply_to_id:root},
+  ];
+  const {page}=await app(t,{comments});
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  await page.getByRole('button',{name:/查看 1 条回复/}).click();await expect(page.getByText('Reply',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'回复 A listener 的评论'}).first().click();await expect(page.locator('#authPanel')).toBeVisible();
+  await page.locator('#loginEmail').fill('listener@example.com');await page.locator('#loginPassword').fill('test-password-123');await page.locator('#loginSubmit').click();
+  await expect(page.locator('.reply-form textarea')).toBeVisible();
+});
+test('reply pagination loads all replies and keeps existing root pagination separate',async t=>{
+  const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
+  const comments=[{id:root,track_id:1,user_id:'other',author_name:'A listener',body:'Root',created_at:'2026-11-01T00:00:00Z',parent_id:null},
+    ...Array.from({length:25},(_,i)=>({id:`reply-${String(i).padStart(2,'0')}`,track_id:1,user_id:'other',author_name:'A listener',body:`Reply ${i}`,created_at:new Date(Date.UTC(2026,10,2,0,i)).toISOString(),parent_id:root,reply_to_id:root}))];
+  const {page}=await app(t,{signedIn:true,comments});
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  await page.getByRole('button',{name:/查看 25 条回复/}).click();
+  await expect(page.locator('.comment-reply')).toHaveCount(20);
+  await page.getByRole('button',{name:'加载更多回复'}).click();await expect(page.locator('.comment-reply')).toHaveCount(25);
+  await expect(page.getByRole('button',{name:'加载更多回复'})).toBeHidden();
+});
+test('deleting an owned root keeps another listener’s reply visible as a separate comment',async t=>{
+  const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
+  const child='aaaaaaaa-aaaa-4aaa-8aaa-000000000002';
+  const comments=[
+    {id:root,track_id:1,user_id:USER.id,author_name:'Test listener',body:'My root',created_at:'2026-11-15T00:00:00Z',parent_id:null},
+    {id:child,track_id:1,user_id:'other',author_name:'Other listener',body:'Their reply',created_at:'2026-11-15T00:01:00Z',parent_id:root,reply_to_id:root},
+  ];
+  const {page}=await app(t,{signedIn:true,comments});
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'删除我的评论'}).click();
+  await expect(page.getByText('My root')).toBeHidden();await expect(page.getByText('Their reply')).toBeVisible();
+  await expect(page.locator('#commentsList > .comment-item')).toHaveCount(1);
+});
+test('the previous schema continues to read and post root comments until upgraded',async t=>{
+  const {page,state}=await app(t,{signedIn:true,legacy:true,comments:[{id:'old',track_id:1,user_id:'other',author_name:'Earlier listener',body:'Earlier comment',created_at:'2026-11-15T00:00:00Z'}]});
+  await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
+  await expect(page.getByText('Earlier comment')).toBeVisible();await expect(page.locator('#threadStatus')).toBeVisible();
+  await expect(page.locator('.reply-action')).toHaveCount(0);
+  await page.locator('#commentBody').fill('Still works');await page.locator('#postComment').click();
+  await expect.poll(()=>state.posts.length).toBe(1);
 });
 test('signing in from the discussion resumes the same thread; a member can publish and delete',async t=>{
   const {page,state}=await app(t);
@@ -196,7 +329,7 @@ test('failed comment submissions keep the draft, and a missing table shows no fa
   const {page,state}=await app(t,{signedIn:true,postError:true});
   await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();await expect(page.locator('#postComment')).toBeEnabled();
   await page.locator('#commentBody').fill('Keep my note.');await page.locator('#postComment').click();
-  await expect(page.locator('#commentFeedback')).toContainText('15 秒');assert.equal(await page.locator('#commentBody').inputValue(),'Keep my note.');assert.equal(state.posts.length,0);
+  await expect(page.locator('#commentFeedback')).toContainText('暂时无法发布');assert.equal(await page.locator('#commentBody').inputValue(),'Keep my note.');assert.equal(state.posts.length,0);
   await page.locator('#closeComments').click();
   const other=await app(t,{signedIn:true,missing:true});
   await other.page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();

@@ -1,7 +1,9 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
 import { buildLibrary } from './library.js';
-import { createCommentsController } from './comments.js';
+import { createCommentsController } from './comments.js?v=2';
+import { createAccountController } from './account.js';
+import { randomAvatar } from './avatars.js';
 import { mountIcons } from './icons.js';
 
 const API = `${SUPABASE_URL}/rest/v1/listening_progress`;
@@ -429,11 +431,11 @@ function saveSession(value) {
   if(value.user) currentUser=value.user;
   try {localStorage.setItem(AUTH_SESSION_KEY,JSON.stringify(session));} catch { /* in-memory sign-in still works */ }
 }
-async function authRequest(path,body=null,token=null) {
+async function authRequest(path,body=null,token=null,method=null) {
   const headers={apikey:SUPABASE_PUBLISHABLE_KEY,Accept:'application/json'};
   if(body!==null) headers['Content-Type']='application/json';
   if(token) headers.Authorization=`Bearer ${token}`;
-  const response=await apiFetch(`${SUPABASE_URL}/auth/v1${path}`,{method:body!==null?'POST':'GET',headers,...(body!==null?{body:JSON.stringify(body)}:{})});
+  const response=await apiFetch(`${SUPABASE_URL}/auth/v1${path}`,{method:method || (body!==null?'POST':'GET'),headers,...(body!==null?{body:JSON.stringify(body)}:{})});
   return response.status===204?{}:await response.json();
 }
 async function validAccessToken() {
@@ -468,7 +470,8 @@ function setAdmin(value) {
   document.getElementById('modeLabel').textContent=isAdmin?'管理员':signedIn?'已登录':'访客';
   document.getElementById('modeLabel').classList.toggle('admin',isAdmin);
   document.getElementById('accountButtonLabel').textContent=signedIn?'我的账号':'登录 / 注册';
-  document.getElementById('logoutBtn').hidden=!signedIn;
+  document.getElementById('adminToggle').hidden=signedIn;
+  document.getElementById('logoutBtn').hidden=true;
   document.getElementById('authTabs').hidden=signedIn;
   document.getElementById('loginForm').hidden=signedIn || document.getElementById('signupTab').getAttribute('aria-pressed')==='true';
   document.getElementById('signupForm').hidden=signedIn || document.getElementById('signupTab').getAttribute('aria-pressed')!=='true';
@@ -485,6 +488,7 @@ function setAdmin(value) {
   for(const id of knownNumbers){renderState(id);renderNote(id);}
   if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);}
   comments.updateAuth();
+  account.render();
 }
 async function checkAdminAccess() {
   const generation=authGeneration;
@@ -555,7 +559,7 @@ async function signUp(email,password,name) {
   if(name.length<2 || name.length>40) throw new Error('公开昵称需要 2–40 个字，请重新填写。');
   authGeneration++;
   const target=location.protocol==='https:' || ['localhost','127.0.0.1'].includes(location.hostname) ? location.origin+location.pathname : SITE_URL;
-  const result=await authRequest(`/signup?redirect_to=${encodeURIComponent(target)}`,{email,password,data:{display_name:name}});
+  const result=await authRequest(`/signup?redirect_to=${encodeURIComponent(target)}`,{email,password,data:{display_name:name,avatar_key:randomAvatar()}});
   document.getElementById('signupPassword').value='';
   if(result.access_token){
     saveSession(result);
@@ -584,7 +588,21 @@ async function signOut() {
   if(previous) authRequest('/logout',{},previous).catch(()=>{});
   notify('已退出账号');
 }
+async function updateAccountProfile(changes) {
+  const generation=authGeneration;
+  const userId=currentUser?.id;
+  const token=await validAccessToken();
+  if(!token || !userId || currentUser?.id!==userId) throw new Error('请重新登录后修改资料。');
+  const result=await authRequest('/user',{data:{...currentUser.user_metadata,...changes}},token,'PUT');
+  const updated=result.user || result;
+  if(generation!==authGeneration || currentUser?.id!==userId) throw new Error('账号状态已变化，请重新登录。');
+  if(updated.id!==userId) throw new Error('未能确认资料是否保存，请重试。');
+  currentUser=updated;
+  setAdmin(isAdmin);
+  comments.updateProfile(updated);
+}
 const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
+const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),signOut});
 mountIcons();
 loadStates();loadNotes();buildUI();setAdmin(false);refreshStats();loadCloud();restoreAuth();
 
