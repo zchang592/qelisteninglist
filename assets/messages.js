@@ -1,7 +1,7 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 
 // Inbox state is local to this browser. Removing a notice never removes the public comment.
-export function createMessagesController({isAdmin,getUser,getToken,apiFetch}) {
+export function createMessagesController({isAdmin,getUser,getToken,apiFetch,openComment}) {
   const dialog=document.getElementById('messagesDialog');
   const list=document.getElementById('messagesList');
   const status=document.getElementById('messagesStatus');
@@ -20,9 +20,11 @@ export function createMessagesController({isAdmin,getUser,getToken,apiFetch}) {
     document.getElementById('messagesSelectAll').checked=false;
     status.textContent=visible.length?'':'这里还没有消息。';
     for(const row of visible){
-      const item=document.createElement('label');item.className='message-item';
+      const item=document.createElement('div');item.className='message-item';
       const check=document.createElement('input');check.type='checkbox';check.value=row.id;check.setAttribute('aria-label',`选择 ${row.author_name || '听者'} 的评论`);
-      const content=document.createElement('span');content.className='message-content';
+      const content=document.createElement('button');content.type='button';content.className='message-content';
+      content.setAttribute('aria-label',`查看 ${row.author_name || '听者'} 的评论`);
+      content.addEventListener('click',()=>{dialog.close();openComment(row);});
       const meta=document.createElement('span');meta.className='message-meta';
       const name=document.createElement('strong');name.textContent=row.author_name||'听者';
       const time=document.createElement('time');time.dateTime=row.created_at;time.textContent=new Date(row.created_at).toLocaleString('zh-CN');

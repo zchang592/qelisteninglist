@@ -28,6 +28,7 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
   let threads = new Map();
   let author = getUser()?.id || null;
   let guestReplyIntent = null;
+  let highlightedCommentId = null;
 
   const all = document.createElement('option');
   all.value=''; all.textContent='全部曲目 · 选择作品后可发表评论'; select.append(all);
@@ -85,6 +86,7 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
     const article=document.createElement('article');
     article.className=isReply?'comment-item comment-reply':'comment-item';
     article.dataset.commentId=row.id;
+    if(row.id===highlightedCommentId){article.classList.add('comment-highlight');article.tabIndex=-1;}
     const header=document.createElement('div'); header.className='comment-author-row';
     const avatar=authorAvatar(row);
     const name=document.createElement('span'); name.className='comment-author'; name.textContent=row.author_name || '听者';
@@ -280,7 +282,7 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
     activeTrack=id;select.value=id || '';
     $('commentsTitle').textContent=id?'曲目讨论':'听辨讨论';
     $('commentsDescription').textContent=id?`${String(id).padStart(2,'0')} / ${tracks.get(id)}`:'从中世纪到二十世纪，交流作品、听辨特征与录音版本。';
-    body.value=drafts.get(id) || '';updateCounter();feedback();updateAuth();load();
+    body.value=drafts.get(id) || '';updateCounter();feedback();updateAuth();return load();
   }
   function open(id=null) {
     if(id!==null && !tracks.has(id)) return;
@@ -288,7 +290,40 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
     if(!dialog.open && backendMode==='legacy') backendMode=null;
     $('commentsFilter').hidden=id!==null;
     if(!dialog.open) dialog.showModal();
-    changeTrack(id);
+    highlightedCommentId=null;
+    return changeTrack(id);
+  }
+  async function openComment(notice) {
+    if(!notice || !tracks.has(Number(notice.track_id)))return;
+    await open(Number(notice.track_id));
+    const request=generation;
+    try {
+      const fetchOne=async id=>{
+        const params=new URLSearchParams({select:THREAD_FIELDS,id:`eq.${id}`,limit:'1'});
+        const response=await apiFetch(`${ENDPOINT}?${params}`,{headers:headers()});
+        const data=await response.json();return Array.isArray(data)?data[0]:null;
+      };
+      const target=await fetchOne(notice.id);
+      if(request!==generation || !dialog.open)return;
+      if(!target || Number(target.track_id)!==Number(notice.track_id)){feedback('这条评论可能已被删除。');return;}
+      const rootId=target.parent_id || target.id;
+      let root=rows.find(row=>row.id===rootId);
+      if(!root){root=target.parent_id?await fetchOne(rootId):target;if(request!==generation||!dialog.open)return;
+        if(!root || Number(root.track_id)!==Number(notice.track_id)){feedback('这条讨论已不可用。');return;}
+        rows.push(root);
+      }
+      highlightedCommentId=target.id;
+      if(target.parent_id && backendMode==='threads'){
+        const thread=threadFor(root.id);thread.open=true;
+        if(!thread.loaded)await loadReplies(root);
+        if(request!==generation||!dialog.open)return;
+        if(!thread.rows.some(row=>row.id===target.id))thread.rows.push(target);
+        thread.rows.sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id));
+      }
+      renderRows();
+      const element=list.querySelector(`[data-comment-id="${CSS.escape(target.id)}"]`);
+      element?.scrollIntoView({block:'center',behavior:'smooth'});element?.focus({preventScroll:true});
+    }catch{if(request===generation&&dialog.open)feedback('无法定位评论，请稍后重试。');}
   }
   async function postReply(root,thread,value) {
     const text=value.trim();
@@ -348,5 +383,5 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
     rows.forEach(apply);for(const thread of threads.values())thread.rows.forEach(apply);
     renderRows();
   }
-  return {open,updateAuth,updateProfile};
+  return {open,openComment,updateAuth,updateProfile};
 }

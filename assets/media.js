@@ -1,4 +1,5 @@
 import { earlyRecordings } from './early-recordings.js?v=1.2.0';
+import { laterRecordings } from './later-recordings.js?v=1.5.0';
 import { icon } from './icons.js?v=3';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
@@ -15,6 +16,7 @@ export const mediaCatalog = {
 // Keep variant notes visible: identical mass movements can refer to different settings or performances.
 export const youtubeRecordings = {
   ...earlyRecordings,
+  ...laterRecordings,
   1: [
     {title:'Missa de Angelis · Kyrie · Schola Gregoriana Mediolanensis',url:'https://www.youtube.com/watch?v=2_IUdY21fQM',note:'唱片发行版；曲名明确标为 Missa de Angelis – Kyrie。'},
     {title:'Missa VIII de Angelis · Kyrie',url:'https://www.youtube.com/watch?v=dG-gOLUnAN0',note:'独立 Kyrie 片段。'},
@@ -95,6 +97,7 @@ export function createMediaControls(id, fullText) {
   header.append(platformName,youtubeSearch);contents.append(header);
   const entries=youtubeRecordings[id] || [];
   const versionList=document.createElement('div');versionList.className='recording-slots';
+  if(!entries.length){const pending=document.createElement('p');pending.className='recording-unavailable';pending.textContent='录音链接待补充，可先使用上方搜索。';versionList.append(pending);}
   for(let index=0;index<entries.length;index++){
     const entry=entries[index];
     const video=youtubeVideoId(entry?.url);

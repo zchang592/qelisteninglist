@@ -1,11 +1,11 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.3.0';
+import { buildLibrary } from './library.js?v=1.5.0';
 import { createAdminController } from './admin.js';
-import { createMessagesController } from './messages.js?v=1.3.0';
-import { createPresentation } from './presentation.js?v=1.4.0';
+import { createMessagesController } from './messages.js?v=1.5.0';
+import { createPresentation } from './presentation.js?v=1.5.0';
 import { createFavoritesController } from './favorites.js';
-import { createCommentsController } from './comments.js?v=1.3.0';
+import { createCommentsController } from './comments.js?v=1.5.0';
 import { createAccountController } from './account.js?v=1.3.0';
 import { randomAvatar } from './avatars.js?v=1.3.0';
 import { mountIcons } from './icons.js?v=3';
@@ -594,7 +594,7 @@ async function updateAccountProfile(changes) {
 const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
 const favorites=createFavoritesController({getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
 const admin=createAdminController({data,stateButtons,isAdmin:()=>isAdmin,changeState,renderState,refreshStats});
-const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>currentUser,getToken:validAccessToken,apiFetch});
+const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>currentUser,getToken:validAccessToken,apiFetch,openComment:row=>comments.openComment(row)});
 const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),openMessages:()=>messages.open(),signOut});
 mountIcons();
 buildUI();setAdmin(false);refreshStats();restoreAuth();

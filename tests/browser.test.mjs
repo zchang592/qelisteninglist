@@ -130,6 +130,8 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
         }
         const id=url.searchParams.get('track_id')?.slice(3);
         let result=state.comments.filter(row=>!id || row.track_id===Number(id));
+        const commentId=url.searchParams.get('id');
+        if(commentId?.startsWith('eq.'))result=result.filter(row=>row.id===commentId.slice(3));
         const parent=url.searchParams.get('parent_id');
         if(parent==='is.null')result=result.filter(row=>!row.parent_id);
         else if(parent?.startsWith('eq.'))result=result.filter(row=>row.parent_id===parent.slice(3));
@@ -270,6 +272,23 @@ test('language and dark mode persist and mobile controls fit the viewport',async
   await page.reload();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
   await expect(page.locator('#showIntroduction')).toHaveText('About this site');
 });
+test('mobile text controls have distinct aligned touch targets and discussion remains prominent',async t=>{
+  const {page}=await app(t);
+  await page.setViewportSize({width:320,height:800});
+  await page.locator('#languageToggle').click();
+  const controls=page.locator('.account-actions > a, .account-actions > button:not([hidden])');
+  const boxes=[];
+  for(const element of await controls.all()){const box=await element.boundingBox();if(box)boxes.push(box);}
+  for(const box of boxes){assert.ok(box.x>=0 && box.x+box.width<=320);assert.ok(box.height>=40);}
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
+    const a=boxes[i],b=boxes[j];assert.ok(a.x+a.width<=b.x+.5 || b.x+b.width<=a.x+.5 || a.y+a.height<=b.y+.5 || b.y+b.height<=a.y+.5,'controls must not overlap');
+  }
+  const home=await page.locator('.account-actions > a').boundingBox();const about=await page.locator('#showIntroduction').boundingBox();
+  assert.ok(Math.abs((home.y+home.height/2)-(about.y+about.height/2))<2);
+  await expect(page.locator('#track-1 .track-index')).toHaveCSS('font-family',/Times New Roman/);
+  const discussion=page.locator('#track-1 .comment-button');
+  assert.notEqual(await discussion.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+});
 test('administrator can edit both introductions and generate invitation codes',async t=>{
   const {page,state}=await app(t,{signedIn:true,admin:true});
   await page.locator('#avatarTrigger').hover();await page.locator('#profileSiteSettings').click();
@@ -289,6 +308,20 @@ test('administrator can remove and restore multiple comment notices',async t=>{
   await page.locator('#messagesTrashTab').click();await expect(page.locator('.message-item')).toHaveCount(2);
   await page.locator('#messagesSelectAll').check();await page.locator('#messagesAction').click();
   await page.locator('#messagesInboxTab').click();await expect(page.locator('.message-item')).toHaveCount(2);
+});
+test('administrator message opens the exact reply even when the root and reply are outside the first page',async t=>{
+  const root='11111111-aaaa-4aaa-8aaa-000000000001';
+  const base={track_id:2,user_id:USER.id,author_name:'Listener',avatar_key:'note-03'};
+  const comments=[{...base,id:root,body:'An older root',created_at:'2025-01-01T00:00:00Z'}];
+  for(let i=0;i<25;i++)comments.push({...base,id:`22222222-aaaa-4aaa-8aaa-${String(i).padStart(12,'0')}`,body:`Other root ${i}`,created_at:`2025-02-${String(i+1).padStart(2,'0')}T00:00:00Z`});
+  for(let i=0;i<25;i++)comments.push({...base,id:`33333333-aaaa-4aaa-8aaa-${String(i).padStart(12,'0')}`,parent_id:root,body:`Reply ${i}`,created_at:`2025-03-${String(i+1).padStart(2,'0')}T00:00:00Z`});
+  const {page}=await app(t,{signedIn:true,admin:true,comments});
+  await page.locator('#avatarTrigger').hover();await page.locator('#profileMessages').click();
+  await page.getByRole('button',{name:'查看 Listener 的评论'}).first().click();
+  await expect(page.locator('#commentsDialog')).toBeVisible();
+  await expect(page.locator('#commentsDescription')).toContainText('02 /');
+  await expect(page.locator('[data-comment-id="33333333-aaaa-4aaa-8aaa-000000000024"]')).toHaveClass(/comment-highlight/);
+  await expect(page.locator('[data-comment-id="11111111-aaaa-4aaa-8aaa-000000000001"]')).toBeVisible();
 });
 test('works provide YouTube recordings and NetEase search with collapsible players',async t=>{
   const {page}=await app(t);
@@ -346,7 +379,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
@@ -372,13 +405,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

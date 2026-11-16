@@ -27,7 +27,7 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 
-YouTube recordings are listed in `assets/media.js` and `assets/early-recordings.js`. Search metadata helps identify candidates; listeners should check interpretation, movement and version against the source list. The YouTube and NetEase search buttons open platform searches. A YouTube video link supplies an inline player and an external link. No recording is played automatically.
+YouTube recordings are listed in `assets/media.js`, `assets/early-recordings.js`, and `assets/later-recordings.js`. YouTube search and public video metadata help identify candidates; listeners should check interpretation, movement and version against the source list. Some works still await verified links and keep a search button. The NetEase button opens a platform search, subject to availability and regional restrictions. A YouTube video link supplies an inline player and an external link. No recording is played automatically.
 
 Favorites require sign-in and are private to each user. The administrator's existing status data is protected by RLS and appears only in the avatar menu's private progress dialog. The notes interface has been removed. Historic notes and any unsent legacy note edits are preserved in the database or pending queue; changing a status does not overwrite an existing note.
 
