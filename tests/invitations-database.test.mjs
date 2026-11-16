@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+
+test('invites are single-use, atomic, private, and introduction editing is admin-only',async t=>{
+  const db=new PGlite();t.after(()=>db.close());
+  await db.exec(`create role anon; create role authenticated; create schema auth;
+    create table auth.users(id uuid primary key, raw_user_meta_data jsonb);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+    grant usage on schema auth,public to anon,authenticated;
+    create function public.am_i_qe_admin() returns boolean language sql stable as $$ select auth.uid()='11111111-1111-4111-8111-111111111111'::uuid $$;
+    create function public.qe_can_read_private_progress() returns boolean language sql stable as $$ select public.am_i_qe_admin() $$;`);
+  const sql=await readFile(new URL('../supabase/migrations/202611160004_invites_and_introduction.sql',import.meta.url),'utf8');
+  await db.exec(sql);await db.exec(sql);
+  assert.equal(Number((await db.query('select count(*) from public.qe_invites')).rows[0].count),10);
+  const code=(await db.query('select code from public.qe_invites limit 1')).rows[0].code;
+  await assert.rejects(db.query("insert into auth.users values('22222222-2222-4222-8222-222222222222','{}')"),/invitation code/i);
+  await db.query('insert into auth.users values($1,$2::jsonb)',['22222222-2222-4222-8222-222222222222',JSON.stringify({invite_code:code,display_name:'Listener'})]);
+  assert.deepEqual((await db.query("select raw_user_meta_data from auth.users where id='22222222-2222-4222-8222-222222222222'")).rows[0].raw_user_meta_data,{display_name:'Listener'});
+  await assert.rejects(db.query('insert into auth.users values($1,$2::jsonb)',['33333333-3333-4333-8333-333333333333',JSON.stringify({invite_code:code})]),/invitation code/i);
+  await db.exec('set role anon');await assert.rejects(db.query('select * from public.qe_invites'),/permission denied/i);
+  assert.equal((await db.query('select * from public.qe_site_introduction')).rows.length,1);
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",['22222222-2222-4222-8222-222222222222']);await db.exec('set role authenticated');
+  await assert.rejects(db.query('select * from public.qe_admin_invites(0)'),/Administrator required/i);
+  assert.equal((await db.query("update public.qe_site_introduction set content_zh='bad' returning *")).rows.length,0);
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",['11111111-1111-4111-8111-111111111111']);await db.exec('set role authenticated');
+  assert.equal((await db.query('select * from public.qe_admin_invites(0)')).rows.length,10);
+  assert.equal((await db.query("update public.qe_site_introduction set content_zh='ok' returning *")).rows.length,1);
+});

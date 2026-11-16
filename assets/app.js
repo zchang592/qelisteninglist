@@ -1,12 +1,13 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.2.0';
+import { buildLibrary } from './library.js?v=1.3.0';
 import { createAdminController } from './admin.js';
-import { createMessagesController } from './messages.js?v=1.2.0';
+import { createMessagesController } from './messages.js?v=1.3.0';
+import { createPresentation } from './presentation.js?v=1.3.0';
 import { createFavoritesController } from './favorites.js';
-import { createCommentsController } from './comments.js?v=2';
-import { createAccountController } from './account.js?v=1.2.0';
-import { randomAvatar } from './avatars.js';
+import { createCommentsController } from './comments.js?v=1.3.0';
+import { createAccountController } from './account.js?v=1.3.0';
+import { randomAvatar } from './avatars.js?v=1.3.0';
 import { mountIcons } from './icons.js?v=3';
 
 const API = `${SUPABASE_URL}/rest/v1/listening_progress`;
@@ -463,6 +464,7 @@ function setAdmin(value) {
   document.getElementById('accountName').textContent=currentUser?.user_metadata?.display_name || '听者';
   document.getElementById('accountRole').textContent=isAdmin?'管理员 · 可以管理整理进度':'已登录 · 可以收藏和参与讨论';
   document.getElementById('profileAdminProgress').hidden=!isAdmin;
+  document.getElementById('profileSiteSettings').hidden=!isAdmin;
   document.getElementById('profileMessages').hidden=!isAdmin;
   for(const id of knownNumbers)renderState(id);
   if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);admin.clear();messages.reset();}
@@ -536,12 +538,17 @@ async function signIn(email,password) {
   toggleAuth(false);
   notify(admin?'管理员已登录':'登录成功，可以参与曲目讨论了');
 }
-async function signUp(email,password,name) {
+async function signUp(email,password,name,invite) {
   if(name.length<2 || name.length>40) throw new Error('公开昵称需要 2–40 个字，请重新填写。');
+  if(!invite) throw new Error('请填写管理员提供的邀请码。');
+  if(!presentation.isReady()) throw new Error('注册服务暂未就绪，请稍后重试。');
   authGeneration++;
   const target=location.protocol==='https:' || ['localhost','127.0.0.1'].includes(location.hostname) ? location.origin+location.pathname : SITE_URL;
-  const result=await authRequest(`/signup?redirect_to=${encodeURIComponent(target)}`,{email,password,data:{display_name:name,avatar_key:randomAvatar()}});
+  let result;
+  try {result=await authRequest(`/signup?redirect_to=${encodeURIComponent(target)}`,{email,password,data:{display_name:name,avatar_key:randomAvatar(),invite_code:invite}});}
+  catch(error){if(error.status===500)throw new Error('注册失败，请核对邀请码是否有效、尚未使用，并稍后重试。');throw error;}
   document.getElementById('signupPassword').value='';
+  document.getElementById('signupInvite').value='';
   if(result.access_token){
     saveSession(result);
     if(!currentUser) currentUser=await authRequest('/user',null,session.access_token);
@@ -591,14 +598,7 @@ const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>current
 const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),openMessages:()=>messages.open(),signOut});
 mountIcons();
 buildUI();setAdmin(false);refreshStats();restoreAuth();
-
-const welcome=document.getElementById('welcomeDialog');
-try { if(!sessionStorage.getItem('qe-welcome-seen')) welcome.showModal(); }
-catch { welcome.showModal(); }
-function rememberWelcome(){try{sessionStorage.setItem('qe-welcome-seen','1');}catch{}}
-welcome.addEventListener('close',rememberWelcome);
-welcome.addEventListener('cancel',rememberWelcome);
-document.getElementById('closeWelcome').addEventListener('click',()=>{rememberWelcome();welcome.close();});
+const presentation=createPresentation({getToken:validAccessToken,isAdmin:()=>isAdmin,apiFetch,notify});
 
 document.getElementById('adminToggle').addEventListener('click',()=>toggleAuth(true));
 document.getElementById('closeAuth').addEventListener('click',()=>toggleAuth(false));
@@ -610,7 +610,7 @@ document.getElementById('communityBtn').addEventListener('click',()=>comments.op
 let authSubmitting=false;
 for(const [formId,submitId,handler] of [
  ['loginForm','loginSubmit',()=>signIn(document.getElementById('loginEmail').value.trim(),document.getElementById('loginPassword').value)],
- ['signupForm','signupSubmit',()=>signUp(document.getElementById('signupEmail').value.trim(),document.getElementById('signupPassword').value,document.getElementById('signupName').value.trim())],
+ ['signupForm','signupSubmit',()=>signUp(document.getElementById('signupEmail').value.trim(),document.getElementById('signupPassword').value,document.getElementById('signupName').value.trim(),document.getElementById('signupInvite').value.trim())],
  ['activationForm',null,claimAdmin]
 ]) document.getElementById(formId).addEventListener('submit',async event=>{
   event.preventDefault();if(authSubmitting) return;authSubmitting=true;

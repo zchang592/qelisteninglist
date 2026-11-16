@@ -50,7 +50,7 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
   t.after(()=>context.close());
   const requests=[];const errors=[];
   const state={comments:structuredClone(comments),favorites:new Set(favorites),posts:[],progress:[],progressRows:new Map([[1,{track_id:1,status:1,note:'Listen for monophonic texture.'}]]),signups:[],media:[],deleted:[],refreshes:0,
-    user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[]};
+    user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[],introduction:{content_zh:'',content_en:''},invites:[]};
   await context.route('**/*',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.origin===origin){await route.continue();return;}
@@ -77,6 +77,15 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
       }
       if(url.pathname==='/auth/v1/logout')return json({});
       if(url.pathname.endsWith('/rpc/am_i_qe_admin'))return json(admin);
+      if(url.pathname.endsWith('/qe_site_introduction')){
+        if(request.method()==='PATCH'){if(!admin)return json({message:'forbidden'},403);state.introduction=request.postDataJSON();}
+        return json([state.introduction]);
+      }
+      if(url.pathname.endsWith('/rpc/qe_admin_invites')){
+        if(!admin)return json({message:'forbidden'},403);
+        if(request.postDataJSON()?.create_count)state.invites.push({code:'test-invitation',used_at:null});
+        return json(state.invites);
+      }
       if(url.pathname.endsWith('/rpc/claim_qe_admin'))return json({});
       if(url.pathname.endsWith('/rpc/qe_comment_reply_counts')){
         const roots=request.postDataJSON().root_ids;
@@ -141,7 +150,7 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
     if(url.hostname.endsWith('.mzstatic.com'))return route.fulfill({status:200,contentType:'audio/wav',body:wav(),headers:{'access-control-allow-origin':'*'}});
     await route.abort();
   });
-  await context.addInitScript(()=>{try{sessionStorage.setItem('qe-welcome-seen','1');}catch{}});
+  await context.addInitScript(()=>{try{localStorage.setItem('qe-welcome-hidden','true');}catch{}});
   if(signedIn) await context.addInitScript(({session,user})=>localStorage.setItem('dmus-qe-admin-session-v1',JSON.stringify({...session,expires_at:Math.floor(Date.now()/1000)+3600})),{session,user:USER});
   if(legacyPending)await context.addInitScript(pending=>localStorage.setItem('dmus-qe-listening-cloud-pending-v1',JSON.stringify(pending)),legacyPending);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
@@ -221,7 +230,7 @@ test('a failed favorite write does not falsely mark the track as saved',async t=
   await expect(page.getByRole('button',{name:'收藏第 1 首',exact:true})).toHaveAttribute('aria-pressed','false');
   assert.equal(state.favorites.size,0);
 });
-test('welcome explains the source and video limitations and stays dismissed during the session',async t=>{
+test('welcome explains the source and video limitations and can be dismissed persistently',async t=>{
   const context=await browser.newContext();t.after(()=>context.close());
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   const page=await context.newPage();await page.goto(origin);
@@ -229,7 +238,29 @@ test('welcome explains the source and video limitations and stays dismissed duri
   await expect(page.locator('#welcomeDialog')).toContainText('不代表最终 QE 考试曲目库');
   await expect(page.locator('#welcomeDialog')).toContainText('AI 自动识别');
   await page.locator('#closeWelcome').click();await page.reload();
+  await expect(page.locator('#welcomeDialog')).toBeVisible();
+  await page.locator('#welcomeNever').check();await page.locator('#closeWelcome').click();await page.reload();
   await expect(page.locator('#welcomeDialog')).toBeHidden();
+  await page.locator('#showIntroduction').click();await expect(page.locator('#welcomeDialog')).toBeVisible();
+  await expect(page.locator('#welcomeNever')).toBeChecked();
+});
+test('language and dark mode persist and mobile controls fit the viewport',async t=>{
+  const {page}=await app(t);
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#languageToggle').click();await expect(page.locator('#showIntroduction')).toHaveText('About this site');
+  await page.locator('#themeToggle').click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.reload();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await expect(page.locator('#showIntroduction')).toHaveText('About this site');
+});
+test('administrator can edit both introductions and generate invitation codes',async t=>{
+  const {page,state}=await app(t,{signedIn:true,admin:true});
+  await page.locator('#avatarTrigger').hover();await page.locator('#profileSiteSettings').click();
+  await expect(page.locator('#siteSettingsDialog')).toBeVisible();
+  await page.locator('#introZh').fill('中文介绍');await page.locator('#introEn').fill('English introduction');
+  await page.locator('#saveIntroduction').click();await expect(page.locator('#settingsStatus')).toHaveText('介绍已保存');
+  assert.equal(state.introduction.content_zh,'中文介绍');assert.equal(state.introduction.content_en,'English introduction');
+  await page.locator('#createInvites').click();await expect(page.locator('#inviteList')).toContainText('test-invitation');
 });
 test('administrator can remove and restore multiple comment notices',async t=>{
   const comments=[{id:'11111111-0000-4000-8000-000000000001',track_id:1,user_id:USER.id,author_name:'A',body:'First message',created_at:'2026-11-16T09:00:00Z'},{id:'11111111-0000-4000-8000-000000000002',track_id:2,user_id:USER.id,author_name:'B',body:'Second message',created_at:'2026-11-16T10:00:00Z'}];
@@ -246,7 +277,6 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   const {page}=await app(t);
   for(let id=1;id<=5;id++) {
     const row=page.locator(`#track-${id}`);
-    if(id!==1)await row.locator('.recording-versions > summary').click();
     const youtube=row.locator('.youtube');const netease=row.locator('.neteasecloudmusic');
     assert.match(await youtube.getAttribute('href'),/^https:\/\/www.youtube.com\/results\?search_query=/);
     assert.match(await netease.getAttribute('href'),/^https:\/\/music.163.com\/#\/search\/m\//);
@@ -256,9 +286,9 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
     await expect(row.locator('.recording-slot a')).toHaveCount(id===5?4:3);
   }
   const first=page.locator('#track-1 .version-preview').first();
-  await first.click();await expect(first).toHaveText('收起');
+  await first.click();await expect(first).toHaveAttribute('aria-expanded','true');
   await expect(page.locator('#track-1 iframe')).toHaveCount(1);
-  await first.click();await expect(first).toHaveText('播放');
+  await first.click();await expect(first).toHaveAttribute('aria-expanded','false');
   await expect(page.locator('#track-1 iframe')).toHaveCount(0);
   await expect(page.locator('a[href*="spotify"]')).toHaveCount(0);
   await expect(page.locator('.preview-button, audio')).toHaveCount(0);
@@ -276,9 +306,10 @@ test('comments are rendered only in a separate modal; guests cannot post and tex
 test('public signup submits nickname and production/local redirect, and asks for email confirmation',async t=>{
   const {page,state}=await app(t);
   await page.locator('#adminToggle').click();await page.locator('#signupTab').click();
-  await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
+  await page.locator('#signupInvite').fill('valid-invitation');await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
   await expect(page.locator('#authMessage')).toContainText('确认邮件');
   assert.equal(state.signups[0].data.display_name,'New listener');
+  assert.equal(state.signups[0].data.invite_code,'valid-invitation');
   assert.match(state.signups[0].data.avatar_key,/^note-(0[1-9]|10)$/);
   assert.equal(state.signups[0].email,'listener@example.com');
   await expect(page.locator('#modeLabel')).toHaveText('访客');await expect(page.locator('#activationBlock')).toBeHidden();
@@ -287,7 +318,7 @@ test('public signup submits nickname and production/local redirect, and asks for
 test('ordinary signup with immediate session enables discussion without administrator activation',async t=>{
   const {page}=await app(t,{autoConfirm:true});
   await page.locator('#adminToggle').click();await page.locator('#signupTab').click();
-  await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
+  await page.locator('#signupInvite').fill('valid-invitation');await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
   await expect(page.locator('#modeLabel')).toHaveText('已登录');await expect(page.locator('#authMessage')).toContainText('参与曲目讨论');
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar',/^note-(0[1-9]|10)$/);
   await expect(page.locator('#profileAdminProgress')).toBeHidden();await expect(page.locator('#track-1 .state-btn')).toHaveCount(0);
@@ -298,7 +329,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.2.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
@@ -324,13 +355,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.2.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.2.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

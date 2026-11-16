@@ -166,12 +166,42 @@ dialog{border:1px solid #dee4d5;border-radius:16px;background:var(--paper);color
 .welcome-dialog{width:510px;line-height:1.8}.welcome-dialog>p{font-size:13px;color:var(--muted)}.welcome-notice{background:#f0f3e9;border:1px solid #e2e8db;border-radius:10px;padding:15px 17px;margin:20px 0;color:#52614f;font-size:12px}.welcome-notice p{margin:8px 0 0}.welcome-dialog .primary-btn{width:100%}
 .messages-dialog{width:650px}.messages-header{display:flex;justify-content:space-between;align-items:start}.messages-header h2{margin:6px 0}.messages-hint{font-size:12px;line-height:1.7;color:var(--muted)}.messages-tabs,.messages-toolbar{display:flex;align-items:center;gap:16px}.messages-tabs [aria-pressed=true]{color:var(--green);font-weight:700}.messages-toolbar{justify-content:space-between;border-top:1px solid var(--stroke);padding:12px 0;font-size:12px}.messages-list{max-height:52dvh;overflow:auto}.message-item{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--stroke)}.message-item input{margin-top:5px}.message-content{display:grid;gap:5px;min-width:0;flex:1}.message-meta{display:flex;justify-content:space-between;gap:8px;font-size:12px}.message-meta time,.message-track{color:var(--muted);font-size:10px}.message-body{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}#messagesStatus{font-size:12px;color:var(--muted)}.messages-badge{display:inline-block;border-radius:20px;padding:1px 6px;background:#a9503d;color:white;font-size:10px}
 .avatar-trigger{position:relative}.avatar-trigger .messages-badge{position:absolute;top:0;right:6px;line-height:16px;min-width:16px;text-align:center}.messages-badge[hidden]{display:none}
+
+/* Cool glass surfaces and readable night palette. */
+:root{--page:#f2f7fc;--paper:#fff;--ink:#182a39;--muted:#586f80;--stroke:#d8e5ee;--green:#286a8a;--green-soft:#e5f2fa;color-scheme:light}
+body{background:radial-gradient(ellipse at 80% 0%,#d9efff 0,transparent 40%),linear-gradient(145deg,#f8fcff,#ebf5fc);background-attachment:fixed}
+.sidebar,.topbar,.avatar-popover,dialog{background:rgba(246,251,255,.78);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border-color:rgba(175,202,218,.45)}
+.sidebar{background:rgba(230,243,252,.78)}
+.composer,.favorite-period,.favorite-flat,.admin-period,.recording-versions,.search-field{background:rgba(255,255,255,.67);border-color:rgba(171,200,218,.44);box-shadow:0 8px 25px rgba(43,94,125,.05)}
+.composer>summary,.favorite-period>summary{background:rgba(232,245,253,.68);color:var(--ink)}
+.composer>summary h3{font-size:16px;font-weight:750;letter-spacing:-.01em}.work-name{font-weight:400}
+.recording-versions>summary:hover,.period-link:hover,.sidebar-discussion:hover,.avatar-trigger:hover{background:rgba(202,229,246,.55)}
+.recording-slot{background:rgba(244,250,255,.8);border:1px solid #dceaf4;border-radius:10px;margin:7px 0;padding:7px 10px;grid-template-columns:25px minmax(0,1fr) auto;box-shadow:0 3px 12px #87b4cf14}
+.recording-slot-name.version-preview{text-align:left;font-size:11px;color:var(--ink);white-space:normal;padding:5px 0;min-height:38px}.recording-slot-name.version-preview[aria-expanded=true]{color:var(--green);font-weight:700}.recording-slot-note{margin:0 0 4px;color:var(--muted)}
+.recording-platform-name,.recording-versions>summary,.recording-platform-header .platform-link,.recording-netease .platform-link{color:var(--ink)}
+.welcome-notice{background:rgba(228,243,253,.8);border-color:#d3e6f3;color:var(--ink)}.welcome-content p{font-size:13px;line-height:1.75;margin:0 0 12px;padding-left:16px;position:relative}.welcome-content p:before{content:'•';position:absolute;left:0;color:var(--green)}.welcome-preference{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);margin:16px 0}
+.settings-dialog{width:620px}.settings-dialog h3{font-size:15px;margin:20px 0 8px}.settings-dialog label{display:block;font-size:12px;font-weight:650;margin:10px 0 4px}.settings-dialog textarea{width:100%;border:1px solid var(--stroke);border-radius:9px;background:var(--paper);padding:10px;resize:vertical}.invite-list{max-height:180px;overflow:auto}.invite-row{display:flex;justify-content:space-between;gap:10px;padding:8px;border-bottom:1px solid var(--stroke);font-size:11px;overflow-wrap:anywhere}.profile-menu-actions{flex-wrap:wrap;justify-content:flex-start}.topbar .account-actions{flex-wrap:wrap;justify-content:flex-end}
+html[data-theme=dark]{color-scheme:dark;--page:#101b25;--paper:#182936;--ink:#edf7ff;--muted:#a8bdca;--stroke:#345061;--green:#83cdee;--green-soft:#243e50}
+html[data-theme=dark] body{background:radial-gradient(ellipse at 80% 0%,#214963,transparent 45%),linear-gradient(145deg,#101b25,#142c3b)}
+html[data-theme=dark] .sidebar,html[data-theme=dark] .topbar,html[data-theme=dark] .avatar-popover,html[data-theme=dark] dialog{background:rgba(22,41,54,.92);border-color:#385769}
+html[data-theme=dark] .composer,html[data-theme=dark] .favorite-period,html[data-theme=dark] .favorite-flat,html[data-theme=dark] .admin-period,html[data-theme=dark] .recording-versions,html[data-theme=dark] .search-field,html[data-theme=dark] .recording-slot,html[data-theme=dark] .reply-list,html[data-theme=dark] .admin-stat,html[data-theme=dark] .welcome-notice{background:rgba(35,59,74,.85);border-color:#385769;color:var(--ink)}
+html[data-theme=dark] .composer>summary,html[data-theme=dark] .admin-period>summary,html[data-theme=dark] .favorite-period>summary{background:#284354;color:var(--ink)}
+html[data-theme=dark] .track,html[data-theme=dark] .comments-compose,html[data-theme=dark] .auth-form input,html[data-theme=dark] .profile-name-row input,html[data-theme=dark] .reply-form textarea,html[data-theme=dark] .favorite-controls button{background:var(--paper);color:var(--ink);border-color:var(--stroke)}
+html[data-theme=dark] .period-link[aria-current=true],html[data-theme=dark] .primary-btn,html[data-theme=dark] .favorite-controls button[aria-pressed=true]{background:#397ba0;color:#fff;border-color:#397ba0}
+html[data-theme=dark] .recording-slot-name,html[data-theme=dark] .recording-platform-name,html[data-theme=dark] .recording-versions>summary,html[data-theme=dark] .message-body,html[data-theme=dark] .work-name,html[data-theme=dark] .comment-body{color:var(--ink)}
+html[data-theme=dark] .pilot-note,html[data-theme=dark] .favorites-nav{background:#284354;color:var(--ink);border-color:#385769}
+html[data-theme=dark] .account-button,html[data-theme=dark] .text-button,html[data-theme=dark] .sidebar-discussion,html[data-theme=dark] .period-link,html[data-theme=dark] .version-open,html[data-theme=dark] .secondary-btn{color:#bed4e2}
+html[data-theme=dark] .period-link[aria-current=true]{color:#fff}
+html[lang=en] .period-heading h2 span,html[lang=en] .period-link-name small{display:none}
+@media(max-width:680px){.topbar{height:auto;min-height:70px;padding:10px 14px;gap:5px}.breadcrumb{font-size:10px}.account-actions{gap:1px}.account-actions .text-button{padding:6px;min-height:40px;font-size:10px}.mode-tag{display:none}.composer>summary h3{font-size:15px}.welcome-dialog,.settings-dialog{max-height:calc(100dvh - 24px);overflow:auto}.welcome-content p{font-size:12px}.recording-slot{grid-template-columns:20px minmax(0,1fr) auto;padding:8px}.recording-slot-name.version-preview{min-height:44px}.profile-menu-actions{gap:2px}.profile-menu-actions .text-button{min-height:38px}.invite-row code{word-break:break-all}}
 .recording-slot-pending{grid-column:3 / -1;font-size:10px;color:#7e8a78;white-space:nowrap}
 .version-preview,.version-open{border:0;background:none;padding:6px;color:#456d4e;font-size:10px;white-space:nowrap}
 .version-preview:hover,.version-open:hover{text-decoration:underline;text-underline-offset:3px}
 .youtube-embed-holder{grid-column:1 / -1}.youtube-embed-holder:empty{display:none}
 .youtube-embed{display:block;width:100%;aspect-ratio:16 / 9;border:0;border-radius:6px;margin-bottom:8px}
 .recording-netease{padding-top:9px}
+.recording-netease{display:block;background:rgba(244,250,255,.8);border:1px solid var(--stroke);border-radius:10px;margin-top:10px;padding:4px 10px}.netease-summary{display:flex;align-items:center;justify-content:space-between;min-height:38px;cursor:pointer;list-style:none}.recording-netease[open] .netease-summary>svg{transform:rotate(90deg)}
+html[data-theme=dark] .recording-netease{background:#233b4a}
 
 @media(max-width:680px){
   .favorites-nav{margin:0;min-height:44px}.favorites-nav .period-link-name small{display:none}

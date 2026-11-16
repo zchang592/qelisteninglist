@@ -1,4 +1,4 @@
-import { AVATAR_KEYS, avatarForUser, avatarName, noteAvatar } from './avatars.js';
+import { AVATAR_KEYS, avatarForUser, avatarName, noteAvatar } from './avatars.js?v=1.3.0';
 
 const $=id=>document.getElementById(id);
 

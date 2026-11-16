@@ -52,6 +52,18 @@ export function noteAvatar(key, extraClass='') {
     glasses:'<g fill="none" stroke="#fffaf1" stroke-width="1.5"><circle cx="23" cy="39" r="3.4"/><circle cx="33" cy="39" r="3.4"/><path d="M26.5 39h3"/></g>',
   };
   // The markup and colours are entirely from the fixed list above, never from user input.
-  svg.innerHTML=`<circle cx="32" cy="32" r="31" fill="${bg}"/><ellipse cx="31" cy="53" rx="15" ry="3" fill="#3c483d" opacity=".08"/><path d="M40 14v22" fill="none" stroke="${ink}" stroke-width="5.5" stroke-linecap="round"/><path d="M40 14c8 1 10 5 10 9" fill="none" stroke="${ink}" stroke-width="5.5" stroke-linecap="round"/><ellipse cx="28" cy="39" rx="15" ry="12" transform="rotate(-12 28 39)" fill="${ink}"/><circle cx="23.5" cy="38.5" r="1.5" fill="#342d2b"/><circle cx="33" cy="37" r="1.5" fill="#342d2b"/><circle cx="19.5" cy="43" r="2" fill="${cheek}" opacity=".9"/><circle cx="36" cy="41" r="2" fill="${cheek}" opacity=".9"/><path d="M26 43c1.3 2 3.6 2 5 0" fill="none" stroke="#493731" stroke-width="1.4" stroke-linecap="round"/>${decorations[detail]}`;
+  const symbols=[
+    `<path d="M40 14v22" stroke="${ink}" stroke-width="5.5" stroke-linecap="round"/>`,
+    `<path d="M40 14v22m0-22c8 1 10 5 10 9" fill="none" stroke="${ink}" stroke-width="5.5" stroke-linecap="round"/>`,
+    `<path d="M40 12v24m0-24c9 2 11 6 10 10m-10-3c8 2 9 5 9 8" fill="none" stroke="${ink}" stroke-width="5" stroke-linecap="round"/>`,
+    `<path d="M40 15v21M40 15l12-3v21" fill="none" stroke="${ink}" stroke-width="5" stroke-linecap="round"/><ellipse cx="47" cy="35" rx="7" ry="5" fill="${ink}"/>`,
+    `<ellipse cx="31" cy="39" rx="17" ry="10" fill="${ink}"/><ellipse cx="31" cy="39" rx="8" ry="4" fill="${bg}" transform="rotate(-15 31 39)"/>`,
+    `<path d="M40 12v24M40 12c7 2 12 6 11 12M40 19c7 2 10 5 10 9M40 26c5 1 8 3 9 6" fill="none" stroke="${ink}" stroke-width="4.5" stroke-linecap="round"/>`,
+    `<text x="27" y="33" text-anchor="middle" font-family="serif" font-size="34" font-weight="bold" fill="${ink}">𝄞</text>`,
+    `<text x="30" y="34" text-anchor="middle" font-family="serif" font-size="34" font-weight="bold" fill="${ink}">𝄢</text>`,
+    `<text x="30" y="34" text-anchor="middle" font-family="serif" font-size="34" font-weight="bold" fill="${ink}">𝄡</text>`,
+    `<path d="M40 12v24m0-24 10-3v21" fill="none" stroke="${ink}" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="45" cy="32" rx="6" ry="5" fill="${ink}"/><circle cx="49" cy="43" r="2" fill="${ink}"/>`,
+  ];
+  svg.innerHTML=`<circle cx="32" cy="32" r="31" fill="${bg}"/><ellipse cx="31" cy="53" rx="15" ry="3" fill="#3c483d" opacity=".08"/>${symbols[index]}<ellipse cx="28" cy="40" rx="14" ry="11" transform="rotate(-12 28 40)" fill="${ink}"/><circle cx="23.5" cy="38.5" r="1.5" fill="#342d2b"/><circle cx="33" cy="37" r="1.5" fill="#342d2b"/><circle cx="19.5" cy="43" r="2" fill="${cheek}" opacity=".9"/><circle cx="36" cy="41" r="2" fill="${cheek}" opacity=".9"/><path d="M26 43c1.3 2 3.6 2 5 0" fill="none" stroke="#493731" stroke-width="1.4" stroke-linecap="round"/>${decorations[detail]}`;
   return svg;
 }

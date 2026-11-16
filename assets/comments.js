@@ -1,6 +1,6 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { icon } from './icons.js';
-import { avatarForUser, noteAvatar } from './avatars.js';
+import { avatarForUser, noteAvatar } from './avatars.js?v=1.3.0';
 
 const ENDPOINT = `${SUPABASE_URL}/rest/v1/listening_comments`;
 const COUNTS_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/qe_comment_reply_counts`;

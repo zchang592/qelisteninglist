@@ -4,11 +4,14 @@
 
 ## 1. 建立评论表
 
-在这个项目的 **SQL Editor** 新建查询。全新项目按顺序运行这三份脚本：
+在这个项目的 **SQL Editor** 新建查询。全新项目按顺序运行这四份脚本：
 
 1. [`202611160001_listening_comments.sql`](../supabase/migrations/202611160001_listening_comments.sql)：创建基础评论表。
 2. [`202611160002_threads_and_avatars.sql`](../supabase/migrations/202611160002_threads_and_avatars.sql)：取消 15 秒发言限制，并启用楼中楼和音符头像。
 3. [`202611160003_private_progress_and_favorites.sql`](../supabase/migrations/202611160003_private_progress_and_favorites.sql)：将原有进度限制为管理员读取，并为每个账号建立独立收藏夹。
+4. [`202611160004_invites_and_introduction.sql`](../supabase/migrations/202611160004_invites_and_introduction.sql)：启用一次性邀请码和管理员可编辑的网站介绍。
+
+管理员登录后，将鼠标移到头像上，选择“网站设置”。页面列出邀请码及使用状态，也可以点击“生成 10 个邀请码”；通过私密渠道把一个未使用的邀请码发给一位新用户。注册成功后邀请码自动作废。网站设置中可分别编辑中文和英文介绍。
 
 已经运行过前两份脚本的项目，只需运行第三份。第二、第三份可重复执行，保留已有评论、进度和历史备注。第一份是历史版本；如果重新运行，必须再运行第二、第三份，否则会重新启用旧的限频规则。
 
