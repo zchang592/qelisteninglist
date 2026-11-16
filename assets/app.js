@@ -118,7 +118,7 @@ function renderState(id) {
   btn.textContent = state === 1 ? '✓' : state === 2 ? '—' : '';
   const stateText = state === 1 ? '音频已确认' : state === 2 ? '准确性待核对' : '未标记';
   btn.setAttribute('aria-checked', state === 1 ? 'true' : state === 2 ? 'mixed' : 'false');
-  btn.disabled = !isAdmin;
+  btn.disabled = !isAdmin || !cloudReady;
   btn.setAttribute('aria-label', `第 ${id} 首：${stateText}${isAdmin ? '，点击切换状态' : '，只读'}`);
   btn.title = isAdmin ? `${stateText}（点击切换：空白 → ✓ → — → 空白）` : `${stateText}（访客只读）`;
 }
@@ -134,7 +134,7 @@ function refreshStats() {
   document.getElementById('uncertainProgress').style.width = `${100 * uncertain / TOTAL}%`;
 }
 function changeState(id) {
-  if (!isAdmin) return;
+  if (!isAdmin || !cloudReady) return;
   const next = ((states[id] || 0) + 1) % 3;
   if (next === 0) delete states[id];
   else states[id] = next;
@@ -210,6 +210,7 @@ function exportProgress() {
 }
 async function importProgress(file) {
   if (!isAdmin) { notify('只有管理员能导入备份'); return; }
+  if (!cloudReady) { notify('请先同步原有进度后再导入备份'); return; }
   try {
     if (file.size > 2000000) throw new Error('备份文件过大');
     const raw = await file.text();
@@ -377,12 +378,17 @@ async function flushPending() {
   }
 }
 async function loadCloud(silent=false) {
+  if (!isAdmin) return;
   if (cloudFetching || syncing) return;
+  const generation=authGeneration;
   cloudFetching = true;
   if (!silent) setCloudStatus('busy', '正在读取云端…', '正在刷新共享进度与备注');
   try {
-    const response = await apiFetch(`${API}?select=track_id,status,note,updated_at&order=track_id.asc`, {headers:requestHeaders()});
+    const token=await validAccessToken();
+    if(!token || generation!==authGeneration || !isAdmin) return;
+    const response = await apiFetch(`${API}?select=track_id,status,note,updated_at&order=track_id.asc`, {headers:requestHeaders(false,true)});
     const rows = await response.json();
+    if(generation!==authGeneration || !isAdmin) return;
     if (!Array.isArray(rows)) throw new Error('服务器返回的数据格式不正确');
     // 服务器数据始终为基准。访客绝不能把旧版 localStorage 内容推送到服务器。
     const remote = new Map(rows.map(row => [String(row.track_id),row]));
@@ -391,9 +397,9 @@ async function loadCloud(silent=false) {
       const pending = isAdmin ? pendingRows[id] : null;
       applyTrackToUI(id, pending ? pending.status : (r?.status || 0), pending ? pending.note : (r?.note || ''));
     }
+    cloudReady=true;
     redrawAll();
     cacheSnapshot();
-    cloudReady=true;
     lastCloudError='';
     if (pendingCount()) {
       setCloudStatus('pending', `待同步 ${pendingCount()} 项`, '云端已连接，正在提交本机修改');
@@ -466,6 +472,8 @@ async function validAccessToken() {
 }
 function setAdmin(value) {
   isAdmin=!!value && !!currentUser && !!session;
+  if(!isAdmin) cloudReady=false;
+  document.body.classList.toggle('is-admin',isAdmin);
   const signedIn=!!currentUser && !!session;
   document.getElementById('modeLabel').textContent=isAdmin?'管理员':signedIn?'已登录':'访客';
   document.getElementById('modeLabel').classList.toggle('admin',isAdmin);
@@ -525,7 +533,7 @@ async function restoreAuth() {
     if(generation!==authGeneration) return;
     currentUser=user;
     const access=await checkAdminAccess();
-    if(access){loadPending();if(pendingCount()) flushPending();}
+    if(access){loadPending();await loadCloud(true);if(pendingCount()) flushPending();}
   } catch {
     if(generation!==authGeneration) return;
     currentUser=null;setAdmin(false);

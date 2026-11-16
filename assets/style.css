@@ -97,3 +97,8 @@ dialog{border:1px solid #dee4d5;border-radius:16px;background:var(--paper);color
   .comment-action,.thread-toggle{min-height:44px}.reply-submit{min-height:44px}
   .thread-service-status{margin-left:19px;margin-right:19px}
 }
+
+/* During the transition, private progress is visible only in an admin session. */
+body:not(.is-admin) .progress-overview,body:not(.is-admin) .state-wrapper,
+body:not(.is-admin) .note-toggle,body:not(.is-admin) .note-panel,
+body:not(.is-admin) .library-bottom,body:not(.is-admin) .footer-note{display:none!important}
