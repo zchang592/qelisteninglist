@@ -3,7 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
 import { buildLibrary } from './library.js?v=1.3.0';
 import { createAdminController } from './admin.js';
 import { createMessagesController } from './messages.js?v=1.3.0';
-import { createPresentation } from './presentation.js?v=1.3.0';
+import { createPresentation } from './presentation.js?v=1.4.0';
 import { createFavoritesController } from './favorites.js';
 import { createCommentsController } from './comments.js?v=1.3.0';
 import { createAccountController } from './account.js?v=1.3.0';
@@ -172,7 +172,7 @@ function exportProgress() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `DMus_QE_听辨进度_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `QE_Listening_List_听辨进度_${new Date().toISOString().slice(0,10)}.json`;
   document.body.append(a);
   a.click();
   a.remove();

@@ -1,4 +1,4 @@
-# DMus QE Listening List
+# QE Listening List
 
 A static listening library for 160 works, hosted on GitHub Pages. Each work has a personal favorite button, YouTube recordings when available, and YouTube/NetEase search links. Supabase stores private administrator progress, individual favorites, email accounts, avatars, nicknames, and threaded comments.
 
@@ -51,3 +51,5 @@ The redesign follows [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-sk
 Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. No recordings are hosted in this repository.
 
 Release metadata: when publishing, increment the version in package.json/package-lock.json and the account menu in index.html, update its UTC timestamp, and refresh changed module/cache query versions.
+
+The independent editorial entrance is `home.html`. The original site URL and `index.html` continue to open the library directly. Visual overrides are in `assets/editorial.css`; the six homepage period links use the existing library navigation through a small UI adapter. Supabase settings, persistent work IDs and backup identifiers are unchanged.

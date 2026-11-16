@@ -244,6 +244,23 @@ test('welcome explains the source and video limitations and can be dismissed per
   await page.locator('#showIntroduction').click();await expect(page.locator('#welcomeDialog')).toBeVisible();
   await expect(page.locator('#welcomeNever')).toBeChecked();
 });
+test('independent home preserves direct library access and links to each period',async t=>{
+  const {page}=await app(t);
+  await expect(page.locator('#trackSearch')).toBeVisible();
+  await expect(page).toHaveTitle('QE Listening List');
+  await page.goto(`${origin}/home.html`);
+  await expect(page.locator('h1')).toHaveText('QEListening List.');
+  for(const width of [1440,768,390,320]){
+    await page.setViewportSize({width,height:900});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`home fits ${width}px`);
+  }
+  await page.locator('#homeLanguage').click();await expect(page.locator('.archive-enter')).toContainText('Explore the library');
+  await page.locator('#homeTheme').click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await page.locator('.period-index a').nth(2).click();
+  await expect(page.locator('#periodTitle')).toContainText('Baroque');
+  await expect(page.locator('#track-12')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+});
 test('language and dark mode persist and mobile controls fit the viewport',async t=>{
   const {page}=await app(t);
   await page.setViewportSize({width:390,height:844});
@@ -329,7 +346,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
@@ -355,13 +372,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.3.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.4.0 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
@@ -480,7 +497,7 @@ test('administrator opens private progress from the avatar, preserves old data, 
   await page.getByRole('checkbox',{name:/第 2 首/}).click();
   await expect.poll(()=>state.progressRows.get(2)?.status).toBe(1);
   assert.equal(state.progressRows.get(2).note,'');
-  const download=page.waitForEvent('download');await page.locator('#exportBtn').click();assert.match((await download).suggestedFilename(),/DMus_QE/);
+  const download=page.waitForEvent('download');await page.locator('#exportBtn').click();assert.match((await download).suggestedFilename(),/QE_Listening_List/);
 });
 test('previously queued note edits survive the transition without exposing the old notes UI',async t=>{
   const {page,state}=await app(t,{signedIn:true,admin:true,legacyPending:{'1':{status:2,note:'A pending legacy edit',revision:1}}});
