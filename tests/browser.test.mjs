@@ -289,6 +289,21 @@ test('mobile text controls have distinct aligned touch targets and discussion re
   const discussion=page.locator('#track-1 .comment-button');
   assert.notEqual(await discussion.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
 });
+test('mobile archive navigation stays in a scrollable left rail under the top controls',async t=>{
+  const {page}=await app(t);
+  await page.setViewportSize({width:320,height:480});
+  const sidebar=page.locator('.sidebar');const nav=page.locator('#periodNav');
+  await expect(sidebar).toHaveCSS('position','fixed');
+  await expect(nav).toHaveCSS('flex-direction','column');
+  const sidebarBox=await sidebar.boundingBox(),topBox=await page.locator('.topbar').boundingBox(),contentBox=await page.locator('.workspace').boundingBox();
+  assert.ok(sidebarBox.y>=topBox.y+topBox.height-1);
+  assert.ok(contentBox.x>=sidebarBox.x+sidebarBox.width-1);
+  assert.ok(await sidebar.evaluate(el=>el.scrollHeight>el.clientHeight),'rail scrolls independently on short screens');
+  await page.locator('#periodNav [aria-controls="period-2"]').click();
+  await expect(page.locator('#periodTitle')).toContainText('Baroque');
+  await expect(page.locator('#track-12')).toBeVisible();
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
+});
 test('administrator can edit both introductions and generate invitation codes',async t=>{
   const {page,state}=await app(t,{signedIn:true,admin:true});
   await page.locator('#avatarTrigger').hover();await page.locator('#profileSiteSettings').click();
@@ -379,7 +394,8 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
+  await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
@@ -405,13 +421,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
