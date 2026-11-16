@@ -1,6 +1,6 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=3';
+import { buildLibrary } from './library.js?v=1.1.0';
 import { createAdminController } from './admin.js';
 import { createFavoritesController } from './favorites.js';
 import { createCommentsController } from './comments.js?v=2';

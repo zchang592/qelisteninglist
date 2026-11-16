@@ -220,7 +220,7 @@ test('a failed favorite write does not falsely mark the track as saved',async t=
   await expect(page.getByRole('button',{name:'收藏第 1 首',exact:true})).toHaveAttribute('aria-pressed','false');
   assert.equal(state.favorites.size,0);
 });
-test('five Medieval works retain their previews and provide four honest YouTube slots and NetEase search',async t=>{
+test('five Medieval works retain their previews and provide available YouTube recordings and NetEase search',async t=>{
   const {page,state}=await app(t);
   for(let id=1;id<=5;id++) {
     const row=page.locator(`#track-${id}`);
@@ -229,9 +229,9 @@ test('five Medieval works retain their previews and provide four honest YouTube 
     assert.match(await youtube.getAttribute('href'),/^https:\/\/www.youtube.com\/results\?search_query=/);
     assert.match(await netease.getAttribute('href'),/^https:\/\/music.163.com\/#\/search\/m\//);
     assert.equal(await youtube.getAttribute('target'),'_blank');
-    await expect(row.locator('.recording-slot')).toHaveCount(4);
-    await expect(row.locator('.recording-slot-pending')).toHaveCount(4);
-    await expect(row.locator('.recording-slot a')).toHaveCount(0);
+    await expect(row.locator('.recording-slot')).toHaveCount(id===5?4:3);
+    await expect(row.locator('.recording-slot-pending')).toHaveCount(0);
+    await expect(row.locator('.recording-slot a')).toHaveCount(id===5?4:3);
     await row.locator('.preview-button').click();await expect(row.locator('audio')).toBeVisible();
     assert.equal(await row.locator('select option').count(),1);
     assert.equal(await row.locator('audio').evaluate(audio=>audio.paused),true);
@@ -287,6 +287,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
+  await expect(page.locator('.release-info')).toContainText('v1.1.0 · 更新于');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-02');
@@ -312,11 +313,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
+  await expect(page.locator('.release-info')).toContainText('v1.1.0 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
+  await expect(page.locator('.release-info')).toContainText('v1.1.0 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

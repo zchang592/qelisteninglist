@@ -162,6 +162,7 @@ dialog{border:1px solid #dee4d5;border-radius:16px;background:var(--paper);color
 .recording-slot{display:grid;grid-template-columns:25px minmax(0,1fr) auto auto;gap:8px;align-items:center;min-height:34px;border-bottom:1px solid #eef1e9;font-size:11px}
 .recording-slot-number{font-size:10px;color:#899581;font-variant-numeric:tabular-nums}
 .recording-slot-name{min-width:0;overflow-wrap:anywhere;color:#54614f}
+.recording-slot-note{grid-column:2 / -1;margin:-4px 0 6px;color:#899581;font-size:10px;line-height:1.5}
 .recording-slot-pending{grid-column:3 / -1;font-size:10px;color:#7e8a78;white-space:nowrap}
 .version-preview,.version-open{border:0;background:none;padding:6px;color:#456d4e;font-size:10px;white-space:nowrap}
 .version-preview:hover,.version-open:hover{text-decoration:underline;text-underline-offset:3px}
@@ -185,3 +186,5 @@ dialog{border:1px solid #dee4d5;border-radius:16px;background:var(--paper);color
   .admin-track .state-btn{width:44px;height:44px}.admin-track-status{grid-column:3;font-size:10px}
   .composer-period{display:block;margin:2px 0 0}
 }
+
+.profile-heading .release-info{font-size:10px;line-height:1.5;color:#7e8a78;margin-top:5px}
