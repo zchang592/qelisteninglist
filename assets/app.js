@@ -1,10 +1,11 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.1.0';
+import { buildLibrary } from './library.js?v=1.2.0';
 import { createAdminController } from './admin.js';
+import { createMessagesController } from './messages.js?v=1.2.0';
 import { createFavoritesController } from './favorites.js';
 import { createCommentsController } from './comments.js?v=2';
-import { createAccountController } from './account.js?v=3';
+import { createAccountController } from './account.js?v=1.2.0';
 import { randomAvatar } from './avatars.js';
 import { mountIcons } from './icons.js?v=3';
 
@@ -462,8 +463,10 @@ function setAdmin(value) {
   document.getElementById('accountName').textContent=currentUser?.user_metadata?.display_name || '听者';
   document.getElementById('accountRole').textContent=isAdmin?'管理员 · 可以管理整理进度':'已登录 · 可以收藏和参与讨论';
   document.getElementById('profileAdminProgress').hidden=!isAdmin;
+  document.getElementById('profileMessages').hidden=!isAdmin;
   for(const id of knownNumbers)renderState(id);
-  if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);admin.clear();}
+  if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);admin.clear();messages.reset();}
+  else messages.refresh();
   comments.updateAuth();
   account.render();
   favorites.userChanged();
@@ -584,9 +587,18 @@ async function updateAccountProfile(changes) {
 const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
 const favorites=createFavoritesController({getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
 const admin=createAdminController({data,stateButtons,isAdmin:()=>isAdmin,changeState,renderState,refreshStats});
-const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),signOut});
+const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>currentUser,getToken:validAccessToken,apiFetch});
+const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),openMessages:()=>messages.open(),signOut});
 mountIcons();
 buildUI();setAdmin(false);refreshStats();restoreAuth();
+
+const welcome=document.getElementById('welcomeDialog');
+try { if(!sessionStorage.getItem('qe-welcome-seen')) welcome.showModal(); }
+catch { welcome.showModal(); }
+function rememberWelcome(){try{sessionStorage.setItem('qe-welcome-seen','1');}catch{}}
+welcome.addEventListener('close',rememberWelcome);
+welcome.addEventListener('cancel',rememberWelcome);
+document.getElementById('closeWelcome').addEventListener('click',()=>{rememberWelcome();welcome.close();});
 
 document.getElementById('adminToggle').addEventListener('click',()=>toggleAuth(true));
 document.getElementById('closeAuth').addEventListener('click',()=>toggleAuth(false));

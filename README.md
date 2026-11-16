@@ -1,6 +1,6 @@
 # DMus QE Listening List
 
-A static listening library for 160 works, hosted on GitHub Pages. Each work has a personal favorite button, curated Medieval YouTube recordings, and YouTube/NetEase search links. The Medieval pilot also offers Apple Music sample previews. Supabase stores private administrator progress, individual favorites, email accounts, avatars, nicknames, and threaded comments.
+A static listening library for 160 works, hosted on GitHub Pages. Each work has a personal favorite button, YouTube recordings when available, and YouTube/NetEase search links. Supabase stores private administrator progress, individual favorites, email accounts, avatars, nicknames, and threaded comments.
 
 ## Local development
 
@@ -27,7 +27,7 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 
-The five Medieval sample recordings are looked up on demand through Apple's public iTunes Search API. Only matching work metadata and HTTPS `*.mzstatic.com` previews are accepted. Previews may be unavailable by recording or region. The YouTube and NetEase buttons are explicitly **search links**. Only available recordings are displayed; add a recording to `youtubeRecordings` in `assets/media.js` as `{title, url}`. A valid YouTube video link then supplies an inline player and an external link. No recording is invented or played automatically.
+YouTube recordings are listed in `assets/media.js` and `assets/early-recordings.js`. Search metadata helps identify candidates; listeners should check interpretation, movement and version against the source list. The YouTube and NetEase search buttons open platform searches. A YouTube video link supplies an inline player and an external link. No recording is played automatically.
 
 Favorites require sign-in and are private to each user. The administrator's existing status data is protected by RLS and appears only in the avatar menu's private progress dialog. The notes interface has been removed. Historic notes and any unsent legacy note edits are preserved in the database or pending queue; changing a status does not overwrite an existing note.
 

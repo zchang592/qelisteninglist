@@ -2,7 +2,7 @@ import { AVATAR_KEYS, avatarForUser, avatarName, noteAvatar } from './avatars.js
 
 const $=id=>document.getElementById(id);
 
-export function createAccountController({getUser, updateProfile, openAuth, openAdmin, signOut}) {
+export function createAccountController({getUser, updateProfile, openAuth, openAdmin, openMessages, signOut}) {
   const menu=$('avatarMenu');
   const popover=$('avatarPopover');
   const trigger=$('avatarTrigger');
@@ -63,6 +63,7 @@ export function createAccountController({getUser, updateProfile, openAuth, openA
   document.addEventListener('pointerdown',event=>{if(!menu.contains(event.target))setOpen(false);});
   $('profileSettings').addEventListener('click',()=>{setOpen(false);openAuth();});
   $('profileAdminProgress').addEventListener('click',()=>{setOpen(false);openAdmin();});
+  $('profileMessages').addEventListener('click',()=>{setOpen(false);openMessages();});
   $('profileLogout').addEventListener('click',()=>{setOpen(false);signOut();});
   $('profileForm').addEventListener('submit',async event=>{
     event.preventDefault();if(busy) return;
