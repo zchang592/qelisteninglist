@@ -4,7 +4,7 @@ The redesign uses [design-taste-frontend](https://github.com/Leonxlnx/taste-skil
 
 The later discussion update replaces the display serif and body font with locally served Plus Jakarta Sans and a Chinese system sans-serif. The account menu and comment threads use ten locally drawn note-character avatars, including keyboard and touch access. The measurements below describe the preceding initial redesign; run the current test suite and visual checks after later changes.
 
-The visual system uses a warm paper ground, deep green actions, Instrument Serif headings, DM Sans text, a consistent radius scale, short hover/press responses, native modal dialogs, and reduced-motion support. Fonts are local. YouTube and Spotify SVGs are the actual Simple Icons assets. No reviews, recordings, usage numbers, or people are invented for the visual design.
+The visual system uses a warm paper ground, deep green actions, Instrument Serif headings, DM Sans text, a consistent radius scale, short hover/press responses, native modal dialogs, and reduced-motion support. Fonts are local. The platform SVGs are official Simple Icons assets; NetEase now replaces the earlier Spotify entry. No reviews, recordings, usage numbers, or people are invented for the visual design.
 
 ## Automated verification
 

@@ -1,6 +1,6 @@
 # DMus QE Listening List
 
-A static listening library for 160 works, hosted on GitHub Pages. The Medieval pilot adds recording previews and YouTube/Spotify search links. Supabase supplies shared progress, email accounts, note avatars, nicknames, and threaded per-work comments in a separate dialog.
+A static listening library for 160 works, hosted on GitHub Pages. Each work has a personal favorite button, four reserved YouTube recording slots, and YouTube/NetEase search links. The Medieval pilot also offers Apple Music sample previews. Supabase stores private administrator progress, individual favorites, email accounts, avatars, nicknames, and threaded comments.
 
 ## Local development
 
@@ -18,14 +18,18 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 
 - `assets/data.js`: all 160 numbered works. IDs are shared with the database; preserve them.
 - `assets/media.js`: the five Medieval lookup queries, recording matching, player, and external links. Add a numbered catalog entry to extend the pilot.
-- `assets/library.js`: period navigation, global search, work rows, and notes.
-- `assets/app.js`: existing shared progress, account flows, and application startup.
+- `assets/library.js`: period navigation, global search, work rows, and favorite grouping.
+- `assets/favorites.js`: account-scoped favorite loading and updates.
+- `assets/admin.js`: private administrator progress dialog and its original three-state controls.
+- `assets/app.js`: private progress synchronization, account flows, and application startup.
 - `assets/account.js` and `assets/avatars.js`: profile menu, nickname updates, and the ten locally drawn note avatars.
 - `assets/comments.js`: separate per-work discussion dialog, threaded replies, and authenticated comment requests.
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 
-Preview recordings are looked up on demand through Apple's public iTunes Search API. Only matching work metadata and HTTPS `*.mzstatic.com` previews are accepted. The actual recording title, performer, album, and Apple Music link are shown after loading. Previews may be unavailable by recording or region. YouTube and Spotify links are explicitly **search links**, not claims that a particular recording was verified. No playback starts automatically; starting another sample pauses the previous one.
+The five Medieval sample recordings are looked up on demand through Apple's public iTunes Search API. Only matching work metadata and HTTPS `*.mzstatic.com` previews are accepted. Previews may be unavailable by recording or region. The YouTube and NetEase buttons are explicitly **search links**. Each YouTube slot is marked as awaiting a link until a verified recording is added to `youtubeRecordings` in `assets/media.js` as `{title, url}`. A valid YouTube video link then supplies an inline player and an external link. No recording is invented or played automatically.
+
+Favorites require sign-in and are private to each user. The administrator's existing status data is protected by RLS and appears only in the avatar menu's private progress dialog. The notes interface has been removed. Historic notes and any unsent legacy note edits are preserved in the database or pending queue; changing a status does not overwrite an existing note.
 
 ## Checks
 

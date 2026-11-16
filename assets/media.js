@@ -1,4 +1,4 @@
-import { icon } from './icons.js';
+import { icon } from './icons.js?v=3';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -9,6 +9,24 @@ export const mediaCatalog = {
   4: {query:'Sumer is icumen in', title:/s[ua]m+[ae]?r.*[iy]?[ck]umen|sumer.*icumen/i, context:/.*/},
   5: {query:'Machaut Messe de Nostre Dame Kyrie', title:/kyrie/i, context:/machaut|messe.*n[oô]tr[ee].*dame/i},
 };
+
+// Add verified recordings later as { title, url } entries under their work ID.
+// Until then, the four visible slots are clearly marked as awaiting links.
+export const youtubeRecordings = {};
+
+export function youtubeVideoId(value) {
+  try {
+    const url=new URL(value);
+    if(url.protocol!=='https:')return null;
+    let id=null;
+    if(url.hostname==='youtu.be')id=url.pathname.slice(1).split('/')[0];
+    else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(url.hostname)) {
+      if(url.pathname==='/watch')id=url.searchParams.get('v');
+      else id=url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/)?.[1];
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(id || '')?id:null;
+  } catch{return null;}
+}
 
 let serial = 0;
 const cache = new Map();
@@ -73,18 +91,11 @@ function platformLink(name, url, logo) {
   link.rel = 'noopener noreferrer';
   link.className = `platform-link ${logo}`;
   link.setAttribute('aria-label', `在 ${name} 搜索这首作品（新标签页）`);
-  const image = document.createElement('img');
-  image.src = `./assets/icons/${logo}.svg`;
-  image.alt = '';
-  image.width = 15;
-  image.height = 15;
-  image.loading = 'lazy';
-  link.append(image, document.createTextNode(name), icon('external', 12));
+  link.append(document.createTextNode(name), icon('external', 12));
   return link;
 }
 
 export function createMediaControls(id, fullText) {
-  if (!mediaCatalog[id]) return null;
   const block = document.createElement('div');
   block.className = 'media-block';
   const top = document.createElement('div');
@@ -118,14 +129,61 @@ export function createMediaControls(id, fullText) {
   const feedback = document.createElement('p');
   feedback.className = 'media-feedback';
   feedback.setAttribute('role', 'status');
-  const links = document.createElement('div');
-  links.className = 'platform-links';
-  links.append(
-    platformLink('YouTube', `https://www.youtube.com/results?search_query=${encodeURIComponent(mediaCatalog[id].query)}`, 'youtube'),
-    platformLink('Spotify', `https://open.spotify.com/search/${encodeURIComponent(mediaCatalog[id].query)}`, 'spotify')
-  );
+  const versionDetails=document.createElement('details');
+  versionDetails.className='recording-versions';
+  if(id===1)versionDetails.open=true;
+  const summary=document.createElement('summary');
+  const summaryTitle=document.createElement('span');summaryTitle.className='recording-versions-title';summaryTitle.textContent='收听版本';
+  const summaryPlatforms=document.createElement('span');summaryPlatforms.className='recording-versions-platforms';summaryPlatforms.textContent='YouTube · 网易云';
+  summary.append(icon('headphones',15),summaryTitle,summaryPlatforms,icon('chevron',14));
+  const contents=document.createElement('div');contents.className='recording-versions-content';
+  const header=document.createElement('div');header.className='recording-platform-header';
+  const platformName=document.createElement('span');platformName.className='recording-platform-name';
+  const youtubeIcon=document.createElement('img');youtubeIcon.src='./assets/icons/youtube.svg';youtubeIcon.alt='';youtubeIcon.width=16;youtubeIcon.height=16;
+  platformName.append(youtubeIcon,document.createTextNode('YouTube'));
+  const query=mediaCatalog[id]?.query || fullText;
+  const youtubeSearch=platformLink('搜索',`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,'youtube');
+  youtubeSearch.setAttribute('aria-label',`在 YouTube 搜索第 ${id} 首作品（新标签页）`);
+  header.append(platformName,youtubeSearch);contents.append(header);
+  const entries=youtubeRecordings[id] || [];
+  const versionList=document.createElement('div');versionList.className='recording-slots';
+  for(let index=0;index<4;index++){
+    const entry=entries[index];
+    const video=youtubeVideoId(entry?.url);
+    const row=document.createElement('div');row.className='recording-slot';
+    const number=document.createElement('span');number.className='recording-slot-number';number.textContent=String(index+1).padStart(2,'0');
+    const name=document.createElement('span');name.className='recording-slot-name';name.textContent=video && entry.title ? entry.title : `录音版本 ${index+1}`;
+    row.append(number,name);
+    if(video){
+      const preview=document.createElement('button');preview.type='button';preview.className='version-preview';preview.textContent='播放';
+      preview.setAttribute('aria-expanded','false');
+      const link=document.createElement('a');link.href=entry.url;link.target='_blank';link.rel='noopener noreferrer';link.className='version-open';link.textContent='打开 ↗';
+      const holder=document.createElement('div');holder.className='youtube-embed-holder';
+      preview.addEventListener('click',()=>{
+        const open=preview.getAttribute('aria-expanded')==='true';
+        document.querySelectorAll('.youtube-embed-holder').forEach(element=>element.replaceChildren());
+        document.querySelectorAll('.version-preview').forEach(button=>button.setAttribute('aria-expanded','false'));
+        if(!open){const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${entry.title || fullText} · YouTube`;
+          frame.src=`https://www.youtube-nocookie.com/embed/${video}`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';
+          holder.append(frame);preview.setAttribute('aria-expanded','true');}
+      });
+      row.append(preview,link,holder);
+    } else {
+      const pending=document.createElement('span');pending.className='recording-slot-pending';pending.textContent='待添加链接';row.append(pending);
+    }
+    versionList.append(row);
+  }
+  contents.append(versionList);
+  const netease=document.createElement('div');netease.className='recording-netease';
+  const neteaseName=document.createElement('span');neteaseName.className='recording-platform-name';
+  const neteaseIcon=document.createElement('img');neteaseIcon.src='./assets/icons/neteasecloudmusic.svg';neteaseIcon.alt='';neteaseIcon.width=16;neteaseIcon.height=16;
+  neteaseName.append(neteaseIcon,document.createTextNode('网易云音乐'));
+  const neteaseSearch=platformLink('搜索',`https://music.163.com/#/search/m/?s=${encodeURIComponent(query)}&type=1`,'neteasecloudmusic');
+  neteaseSearch.setAttribute('aria-label',`在网易云音乐搜索第 ${id} 首作品（新标签页）`);
+  netease.append(neteaseName,neteaseSearch);contents.append(netease);versionDetails.append(summary,contents);
   player.append(select, recordingTitle, audio, listenFull);
-  block.append(top, player, feedback, links);
+  if(mediaCatalog[id])block.append(top, player, feedback);
+  block.append(versionDetails);
 
   let recordings = [];
   function choose(index) {

@@ -1,10 +1,12 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js';
+import { buildLibrary } from './library.js?v=3';
+import { createAdminController } from './admin.js';
+import { createFavoritesController } from './favorites.js';
 import { createCommentsController } from './comments.js?v=2';
-import { createAccountController } from './account.js';
+import { createAccountController } from './account.js?v=3';
 import { randomAvatar } from './avatars.js';
-import { mountIcons } from './icons.js';
+import { mountIcons } from './icons.js?v=3';
 
 const API = `${SUPABASE_URL}/rest/v1/listening_progress`;
 const PENDING_KEY = 'dmus-qe-listening-cloud-pending-v1';
@@ -17,7 +19,6 @@ const notes = Object.create(null);
 let storageAvailable = true;
 const app = document.getElementById('app');
 const stateButtons = new Map();
-const noteControls = new Map();
 const pendingRows = Object.create(null);
 let cloudReady = false;
 let syncing = false;
@@ -52,7 +53,7 @@ function loadStates() {
     }
   } catch (err) {
     storageAvailable = false;
-    document.getElementById('storageNote').textContent = '此浏览器不允许自动保存本地数据。请使用「导出进度与备注」备份。';
+    setCloudStatus('error','本机无法保存缓存','请保持联网并导出进度备份');
   }
 }
 function loadNotes() {
@@ -66,7 +67,7 @@ function loadNotes() {
     }
   } catch (err) {
     storageAvailable = false;
-    document.getElementById('storageNote').textContent = '浏览器无法读取备注或勾选数据，请使用「导出进度与备注」保存备份。';
+    setCloudStatus('error','无法读取本机缓存','请检查浏览器存储设置');
   }
 }
 function persistNotes() {
@@ -75,28 +76,9 @@ function persistNotes() {
     localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
   } catch (err) {
     storageAvailable = false;
-    document.getElementById('storageNote').textContent = '自动保存失败，请立即使用「导出进度与备注」备份。';
-    notify('备注自动保存失败，请导出备份');
+    setCloudStatus('error','本机缓存保存失败','请保持联网并导出进度备份');
+    notify('本机缓存保存失败，请导出进度备份');
   }
-}
-function renderNote(id) {
-  const ui = noteControls.get(id);
-  if (!ui) return;
-  const filled = Boolean(notes[id] && notes[id].trim());
-  ui.button.classList.toggle('has-note', filled);
-  ui.button.textContent = filled ? '备注 · 已写' : '备注';
-  ui.button.title = isAdmin ? (filled ? '查看或编辑备注' : '添加备注') : '查看备注（访客只读）';
-  ui.input.readOnly = !isAdmin;
-  if (document.activeElement !== ui.input) ui.input.value = notes[id] || '';
-}
-function updateNote(id, text) {
-  if (!isAdmin) return;
-  if (text.trim()) notes[id] = text;
-  else delete notes[id];
-  renderNote(id);
-  refreshStats();
-  persistNotes();
-  queueTrack(id, true);
 }
 function persistStates() {
   if (!storageAvailable) return;
@@ -104,8 +86,8 @@ function persistStates() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
   } catch (err) {
     storageAvailable = false;
-    document.getElementById('storageNote').textContent = '自动保存失败，请使用「导出进度与备注」备份。';
-    notify('自动保存失败，请导出进度与备注备份');
+    setCloudStatus('error','本机缓存保存失败','请保持联网并导出进度备份');
+    notify('自动保存失败，请导出进度备份');
   }
 }
 function renderState(id) {
@@ -129,7 +111,6 @@ function refreshStats() {
   document.getElementById('confirmedCount').textContent = confirmed;
   document.getElementById('uncertainCount').textContent = uncertain;
   document.getElementById('emptyCount').textContent = TOTAL - confirmed - uncertain;
-  document.getElementById('notesCount').textContent = Object.keys(notes).length;
   document.getElementById('confirmedProgress').style.width = `${100 * confirmed / TOTAL}%`;
   document.getElementById('uncertainProgress').style.width = `${100 * uncertain / TOTAL}%`;
 }
@@ -176,27 +157,15 @@ function makeButton(label, value) {
   button.addEventListener('click', () => copyToClipboard(value, button, label));
   return button;
 }
-function makeSummary(name, count, suffix) {
-  const summary = document.createElement('summary');
-  const label = document.createElement('span');
-  label.textContent = name;
-  const countSpan = document.createElement('span');
-  countSpan.className = 'count';
-  countSpan.textContent = `${count} ${suffix}`;
-  summary.append(label, countSpan);
-  return summary;
-}
+let library;
 function buildUI() {
-  buildLibrary({data, app, stateButtons, noteControls, isAdmin:()=>isAdmin, changeState, updateNote, makeButton, openComments:id=>comments.open(id)});
-  for (const id of knownNumbers) { renderState(id); renderNote(id); }
+  library=buildLibrary({data,app,favorites,makeButton,openComments:id=>comments.open(id),openAuth:()=>toggleAuth(true)});
   refreshStats();
 }
-function setAll(open) {
-  app.querySelectorAll('details').forEach(el => { el.open = open; });
-  if(!open) app.querySelectorAll('audio').forEach(audio=>audio.pause());
-}
+function setAll(open) {library.setAll(open);}
 function exportProgress() {
-  const backup = { format: 'DMus-QE-listening-progress', version: 2, exportedAt: new Date().toISOString(), statuses: { ...states }, notes: { ...notes } };
+  if (!isAdmin || !cloudReady) { notify('请先同步原有进度后再导出备份'); return; }
+  const backup = { format: 'DMus-QE-listening-progress', version: 1, exportedAt: new Date().toISOString(), statuses: { ...states } };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -206,7 +175,7 @@ function exportProgress() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  notify('勾选状态及备注备份已导出');
+  notify('勾选状态备份已导出');
 }
 async function importProgress(file) {
   if (!isAdmin) { notify('只有管理员能导入备份'); return; }
@@ -226,34 +195,12 @@ async function importProgress(file) {
       }
       importedStates[id] = state;
     }
-    let importedNotes = null;
-    if (backup.version === 2) {
-      if (!backup.notes || typeof backup.notes !== 'object' || Array.isArray(backup.notes)) {
-        throw new Error('备份缺少有效的备注数据');
-      }
-      importedNotes = Object.create(null);
-      for (const [id, value] of Object.entries(backup.notes)) {
-        if (!knownNumbers.has(Number(id)) || typeof value !== 'string' || value.length > 3000) {
-          throw new Error('备份包含无效的备注');
-        }
-        if (value.trim()) importedNotes[id] = value;
-      }
-    }
-    const hasExisting = Object.keys(states).length > 0 ||
-      (importedNotes !== null && Object.keys(notes).length > 0);
-    if (hasExisting && !confirm(importedNotes === null
-      ? '这是旧版进度备份：将覆盖当前勾选状态，但保留现有备注。是否继续？'
-      : '导入将覆盖当前所有勾选状态和备注。是否继续？')) return;
+    if (Object.keys(states).length && !confirm('导入将覆盖当前勾选状态。是否继续？')) return;
     for (const id of Object.keys(states)) delete states[id];
     Object.assign(states, importedStates);
-    if (importedNotes !== null) {
-      for (const id of Object.keys(notes)) delete notes[id];
-      Object.assign(notes, importedNotes);
-    }
-    for (const id of knownNumbers) { renderState(id); renderNote(id); }
+    for (const id of knownNumbers) renderState(id);
     refreshStats();
     persistStates();
-    if (importedNotes !== null) persistNotes();
     queueAllTracks();
     notify('备份已导入；正在将 160 项进度同步到云端');
   } catch (err) {
@@ -261,7 +208,7 @@ async function importProgress(file) {
   }
 }
 
-// 云端共享进度。游客只读，由 Supabase RLS 限制写入；管理员启用本机待传队列。
+// 私有进度仅管理员读取。旧备注留在数据库中，但不再显示或编辑。
 function setCloudStatus(mode, message, detail='') {
   const label = document.getElementById('syncStatus');
   label.dataset.mode = mode;
@@ -280,7 +227,8 @@ function loadPending() {
     for (const [id, item] of Object.entries(obj)) {
       if (!knownNumbers.has(Number(id)) || !item || typeof item !== 'object') continue;
       if (![0,1,2].includes(item.status) || typeof item.note !== 'string' || item.note.length > 3000) continue;
-      pendingRows[id] = {status:item.status, note:item.note, revision:++queueSerial};
+      // Preserve unsent notes from earlier versions, without reintroducing note editing.
+      pendingRows[id] = {status:item.status, note:item.note, legacyNote:item.legacyNote!==false, revision:++queueSerial};
       applyTrackToUI(id, item.status, item.note);
     }
   } catch { notify('未能读取离线待同步数据，请检查 JSON 备份'); }
@@ -296,15 +244,15 @@ function applyTrackToUI(id, status, note) {
   if (note && note.trim()) notes[id] = note;
   else delete notes[id];
   renderState(Number(id));
-  renderNote(Number(id));
 }
 function redrawAll() {
-  for (const id of knownNumbers) { renderState(id); renderNote(id); }
+  for (const id of knownNumbers) renderState(id);
   refreshStats();
 }
 function queueTrack(id, delayed=false) {
   if (!isAdmin) return;
-  pendingRows[id] = {status: states[id] || 0, note: notes[id] || '', revision: ++queueSerial};
+  const previous=pendingRows[id];
+  pendingRows[id] = {status:states[id] || 0, note:previous?.legacyNote?previous.note:(notes[id] || ''), legacyNote:!!previous?.legacyNote, revision:++queueSerial};
   storePending();
   const n = pendingCount();
   setCloudStatus('pending', `待同步 ${n} 项`, '修改已暂存在本机，将自动上传');
@@ -313,7 +261,10 @@ function queueTrack(id, delayed=false) {
 }
 function queueAllTracks() {
   if (!isAdmin) return;
-  for (const id of knownNumbers) pendingRows[id] = {status:states[id] || 0, note:notes[id] || '', revision:++queueSerial};
+  for (const id of knownNumbers) {
+    const previous=pendingRows[id];
+    pendingRows[id]={status:states[id] || 0,note:previous?.legacyNote?previous.note:(notes[id] || ''),legacyNote:!!previous?.legacyNote,revision:++queueSerial};
+  }
   storePending();
   setCloudStatus('pending', `待同步 ${pendingCount()} 项`, '正在同步导入的备份数据');
   clearTimeout(syncTimer);
@@ -352,16 +303,35 @@ async function flushPending() {
     while (isAdmin && pendingCount()) {
       const accessToken = await validAccessToken();
       if (!accessToken) throw new Error('管理员登录已失效，请重新登录');
-      const batch = Object.entries(pendingRows).slice(0,40);
-      const payload = batch.map(([id, r]) => ({track_id:Number(id), status:r.status, note:r.note, updated_at:new Date().toISOString()}));
-      await apiFetch(`${API}?on_conflict=track_id`, {
-        method:'POST', headers:requestHeaders(true,true), body:JSON.stringify(payload)
-      });
-      for (const [id, item] of batch) {
-        if (pendingRows[id] && pendingRows[id].revision === item.revision) delete pendingRows[id];
+      const generation=authGeneration;
+      const batch=Object.entries(pendingRows).slice(0,6);
+      const results=await Promise.allSettled(batch.map(async([id,item])=>{
+        const target=`${API}?track_id=eq.${encodeURIComponent(id)}`;
+        const patchHeaders={apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json',Accept:'application/json',Prefer:'return=representation'};
+        const payload={status:item.status,updated_at:new Date().toISOString(),...(item.legacyNote?{note:item.note}: {})};
+        const patch=async()=>{
+          const response=await apiFetch(target,{method:'PATCH',headers:patchHeaders,body:JSON.stringify(payload)});
+          const changed=await response.json();
+          if(!Array.isArray(changed))throw new Error('无法确认进度是否保存');
+          return changed.length;
+        };
+        if(await patch())return;
+        if(generation!==authGeneration || !isAdmin)throw new Error('管理员登录已失效');
+        // New rows need a note value on older schemas; existing notes are never changed by status-only edits.
+        await apiFetch(`${API}?on_conflict=track_id`,{method:'POST',headers:{...patchHeaders,Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({track_id:Number(id),status:item.status,note:item.note || '',updated_at:payload.updated_at})});
+        if(generation!==authGeneration || !isAdmin)throw new Error('管理员登录已失效');
+        if(!await patch())throw new Error('无法确认进度是否保存');
+      }));
+      if(generation!==authGeneration || !isAdmin)break;
+      for(let index=0;index<batch.length;index++){
+        const [id,item]=batch[index];
+        if(results[index].status==='fulfilled' && pendingRows[id]?.revision===item.revision)delete pendingRows[id];
       }
       storePending();
+      const failed=results.find(result=>result.status==='rejected');
+      if(failed)throw failed.reason;
     }
+    if(!isAdmin)return;
     lastCloudError='';
     setCloudStatus('ok', '已同步至云端', `全部修改已保存 · ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`);
   } catch(err) {
@@ -382,7 +352,7 @@ async function loadCloud(silent=false) {
   if (cloudFetching || syncing) return;
   const generation=authGeneration;
   cloudFetching = true;
-  if (!silent) setCloudStatus('busy', '正在读取云端…', '正在刷新共享进度与备注');
+  if (!silent) setCloudStatus('busy', '正在读取云端…', '正在刷新整理进度');
   try {
     const token=await validAccessToken();
     if(!token || generation!==authGeneration || !isAdmin) return;
@@ -390,12 +360,14 @@ async function loadCloud(silent=false) {
     const rows = await response.json();
     if(generation!==authGeneration || !isAdmin) return;
     if (!Array.isArray(rows)) throw new Error('服务器返回的数据格式不正确');
-    // 服务器数据始终为基准。访客绝不能把旧版 localStorage 内容推送到服务器。
+    // 服务器数据为基准，尚未同步的管理员修改优先。
     const remote = new Map(rows.map(row => [String(row.track_id),row]));
     for (const id of knownNumbers) {
       const r=remote.get(String(id));
       const pending = isAdmin ? pendingRows[id] : null;
-      applyTrackToUI(id, pending ? pending.status : (r?.status || 0), pending ? pending.note : (r?.note || ''));
+      if(pending && !pending.legacyNote && r)pending.note=r.note || '';
+      const preservedNote=pending?.legacyNote?pending.note:(r?.note || pending?.note || '');
+      applyTrackToUI(id, pending ? pending.status : (r?.status || 0), preservedNote);
     }
     cloudReady=true;
     redrawAll();
@@ -408,7 +380,7 @@ async function loadCloud(silent=false) {
     }
   } catch(err) {
     lastCloudError=String(err.message || err);
-    setCloudStatus('error', '无法读取云端', isAdmin ? '云端连接失败；管理员离线修改暂存本机' : '云端连接失败，请检查网络后重试');
+    if(isAdmin) setCloudStatus('error', '无法读取云端', '请检查网络并点击立即同步');
     // The persistent status presents connection errors without interrupting listening.
   } finally {
     cloudFetching=false;
@@ -488,15 +460,13 @@ function setAdmin(value) {
   document.getElementById('authTitle').textContent=signedIn?'你的听辨账号':'欢迎来到听辨室';
   document.getElementById('authDescription').textContent=signedIn?'每首作品下的讨论按钮，都通向它独立的评论窗口。':'注册一个账号，和其他听者交流作品与录音版本。';
   document.getElementById('accountName').textContent=currentUser?.user_metadata?.display_name || '听者';
-  document.getElementById('accountRole').textContent=isAdmin?'管理员 · 可以维护共享进度与备注':'已登录 · 可以参与讨论';
-  document.getElementById('exportBtn').hidden=!isAdmin;
-  document.getElementById('importBtn').hidden=!isAdmin;
-  document.getElementById('stateHelp').textContent=isAdmin?'点击方框，切换未标记 / 已确认 / 待核对。':'共享进度与备注由管理员维护。';
-  document.getElementById('storageNote').textContent=isAdmin?'修改自动同步云端，断网时暂存本机。建议定期导出进度与备注备份。':signedIn?'已登录，可以参与每首作品的讨论；共享进度与备注由管理员维护。':'访客可浏览全部作品；注册并登录后可参与曲目讨论。';
-  for(const id of knownNumbers){renderState(id);renderNote(id);}
-  if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);}
+  document.getElementById('accountRole').textContent=isAdmin?'管理员 · 可以管理整理进度':'已登录 · 可以收藏和参与讨论';
+  document.getElementById('profileAdminProgress').hidden=!isAdmin;
+  for(const id of knownNumbers)renderState(id);
+  if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);admin.clear();}
   comments.updateAuth();
   account.render();
+  favorites.userChanged();
 }
 async function checkAdminAccess() {
   const generation=authGeneration;
@@ -533,7 +503,7 @@ async function restoreAuth() {
     if(generation!==authGeneration) return;
     currentUser=user;
     const access=await checkAdminAccess();
-    if(access){loadPending();await loadCloud(true);if(pendingCount()) flushPending();}
+    if(access){loadStates();loadNotes();loadPending();await loadCloud(true);if(pendingCount()) flushPending();}
   } catch {
     if(generation!==authGeneration) return;
     currentUser=null;setAdmin(false);
@@ -559,7 +529,7 @@ async function signIn(email,password) {
   if(!currentUser) currentUser=await authRequest('/user',null,session.access_token);
   const admin=await checkAdminAccess();
   document.getElementById('loginPassword').value='';
-  if(admin){loadPending();await loadCloud(true);if(pendingCount()) flushPending();}
+  if(admin){loadStates();loadNotes();loadPending();await loadCloud(true);if(pendingCount()) flushPending();}
   toggleAuth(false);
   notify(admin?'管理员已登录':'登录成功，可以参与曲目讨论了');
 }
@@ -584,15 +554,17 @@ async function claimAdmin() {
   await apiFetch(`${SUPABASE_URL}/rest/v1/rpc/claim_qe_admin`,{method:'POST',headers:{...requestHeaders(false,true),'Content-Type':'application/json'},body:JSON.stringify({activation_code:code})});
   document.getElementById('activationCode').value='';
   if(!await checkAdminAccess()) throw new Error('权限检测失败，请重新登录后核对');
-  toggleAuth(false);loadPending();await loadCloud(true);if(pendingCount()) flushPending();notify('管理员权限已激活');
+  toggleAuth(false);loadStates();loadNotes();loadPending();await loadCloud(true);if(pendingCount()) flushPending();notify('管理员权限已激活');
 }
 async function signOut() {
   const previous=session?.access_token;
   authGeneration++;session=null;currentUser=null;
   try{localStorage.removeItem(AUTH_SESSION_KEY);}catch{}
   setAdmin(false);toggleAuth(false);
-  // Keep other accounts' unsent administrator edits in their existing local queue.
-  loadCloud(true);
+  // Keep unsent administrator edits in their existing local queue.
+  for(const id of Object.keys(states))delete states[id];
+  for(const id of Object.keys(notes))delete notes[id];
+  refreshStats();
   if(previous) authRequest('/logout',{},previous).catch(()=>{});
   notify('已退出账号');
 }
@@ -610,9 +582,11 @@ async function updateAccountProfile(changes) {
   comments.updateProfile(updated);
 }
 const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
-const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),signOut});
+const favorites=createFavoritesController({getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
+const admin=createAdminController({data,stateButtons,isAdmin:()=>isAdmin,changeState,renderState,refreshStats});
+const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),signOut});
 mountIcons();
-loadStates();loadNotes();buildUI();setAdmin(false);refreshStats();loadCloud();restoreAuth();
+buildUI();setAdmin(false);refreshStats();restoreAuth();
 
 document.getElementById('adminToggle').addEventListener('click',()=>toggleAuth(true));
 document.getElementById('closeAuth').addEventListener('click',()=>toggleAuth(false));
@@ -634,9 +608,9 @@ for(const [formId,submitId,handler] of [
   try{await handler();}catch(error){authFeedback(error.message || '提交失败，请稍后重试。',true);}
   finally{authSubmitting=false;controls.forEach(control=>{control.disabled=false;});}
 });
-window.addEventListener('online',()=>{if(isAdmin && pendingCount()) flushPending();else loadCloud(true);});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden && !pendingCount() && !syncing) loadCloud(true);});
-setInterval(()=>{if(!document.hidden && !syncing && (!isAdmin || !pendingCount())) loadCloud(true);},45000);
+window.addEventListener('online',()=>{if(isAdmin && pendingCount()) flushPending();else if(isAdmin)loadCloud(true);if(currentUser && favorites.snapshot().error)favorites.load();});
+document.addEventListener('visibilitychange',()=>{if(isAdmin && !document.hidden && !pendingCount() && !syncing) loadCloud(true);});
+setInterval(()=>{if(isAdmin && !document.hidden && !syncing && !pendingCount()) loadCloud(true);},45000);
 setInterval(()=>{if(session) validAccessToken();},60000);
 document.getElementById('syncBtn').addEventListener('click',manualSync);
 document.getElementById('expandBtn').addEventListener('click',()=>setAll(true));

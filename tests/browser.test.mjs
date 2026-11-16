@@ -45,17 +45,17 @@ function recordings(term) {
     {trackName:'Wrong work',artistName:'Other',previewUrl:'https://audio-ssl.mzstatic.com/wrong.mp3'}
   ]};
 }
-async function app(t,{admin=false,signedIn=false,comments=[],missing=false,legacy=false,postError=false,profileError=false,mediaError=false,autoConfirm=false,refreshFails=false}={}) {
+async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favoritesError=false,favoritesWriteError=false,legacyPending=null,missing=false,legacy=false,postError=false,profileError=false,mediaError=false,autoConfirm=false,refreshFails=false}={}) {
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
   t.after(()=>context.close());
   const requests=[];const errors=[];
-  const state={comments:structuredClone(comments),posts:[],progress:[],signups:[],media:[],deleted:[],refreshes:0,
+  const state={comments:structuredClone(comments),favorites:new Set(favorites),posts:[],progress:[],progressRows:new Map([[1,{track_id:1,status:1,note:'Listen for monophonic texture.'}]]),signups:[],media:[],deleted:[],refreshes:0,
     user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[]};
   await context.route('**/*',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.origin===origin){await route.continue();return;}
     if(url.hostname===SUPABASE){
-      requests.push({path:url.pathname,method:request.method(),body:request.postDataJSON()});
+      requests.push({path:url.pathname,method:request.method(),body:request.postDataJSON(),authenticated:!!request.headers().authorization});
       const json=async(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body),headers:{'access-control-allow-origin':'*'}});
       if(url.pathname==='/auth/v1/token') {
         if(url.searchParams.get('grant_type')==='refresh_token') {state.refreshes++;if(refreshFails)return json({msg:'Invalid refresh token'},400);}
@@ -83,8 +83,26 @@ async function app(t,{admin=false,signedIn=false,comments=[],missing=false,legac
         return json(roots.map(root_id=>({root_id,reply_count:state.comments.filter(row=>row.parent_id===root_id).length})));
       }
       if(url.pathname.endsWith('/listening_progress')){
-        if(request.method()==='POST'){state.progress.push(request.postDataJSON());return route.fulfill({status:201,body:''});}
-        return json([{track_id:1,status:1,note:'Listen for monophonic texture.'}]);
+        if(!admin)return json({message:'forbidden'},403);
+        if(request.method()==='PATCH'){
+          const trackId=Number(url.searchParams.get('track_id')?.slice(3));const payload=request.postDataJSON();
+          state.progress.push({method:'PATCH',trackId,payload});
+          if(!state.progressRows.has(trackId))return json([]);
+          const row={...state.progressRows.get(trackId),...payload};state.progressRows.set(trackId,row);return json([row]);
+        }
+        if(request.method()==='POST'){
+          const payload=request.postDataJSON();state.progress.push({method:'POST',trackId:payload.track_id,payload});
+          if(!state.progressRows.has(payload.track_id))state.progressRows.set(payload.track_id,payload);
+          return route.fulfill({status:201,body:''});
+        }
+        return json([...state.progressRows.values()]);
+      }
+      if(url.pathname.endsWith('/listening_favorites')){
+        if(favoritesError)return json({message:'favorites unavailable'},503);
+        if(favoritesWriteError && request.method()!=='GET')return json({message:'favorites update failed'},503);
+        if(request.method()==='POST'){state.favorites.add(request.postDataJSON().track_id);return route.fulfill({status:201,body:''});}
+        if(request.method()==='DELETE'){state.favorites.delete(Number(url.searchParams.get('track_id')?.slice(3)));return route.fulfill({status:204,body:''});}
+        return json([...state.favorites].map(track_id=>({track_id})));
       }
       if(url.pathname.endsWith('/listening_comments')){
         if(missing)return json({code:'PGRST205',message:'Table not found'},404);
@@ -124,10 +142,11 @@ async function app(t,{admin=false,signedIn=false,comments=[],missing=false,legac
     await route.abort();
   });
   if(signedIn) await context.addInitScript(({session,user})=>localStorage.setItem('dmus-qe-admin-session-v1',JSON.stringify({...session,expires_at:Math.floor(Date.now()/1000)+3600})),{session,user:USER});
+  if(legacyPending)await context.addInitScript(pending=>localStorage.setItem('dmus-qe-listening-cloud-pending-v1',JSON.stringify(pending)),legacyPending);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto(origin);await expect(page.locator('.track:visible')).toHaveCount(5);
-  await expect(page.locator('#confirmedCount')).toHaveText('1');
   if(signedIn)await expect(page.locator('#modeLabel')).toHaveText(admin?'管理员':'已登录');
+  if(admin && !legacyPending)await expect(page.locator('#confirmedCount')).toHaveText('1');
   t.after(()=>assert.deepEqual(errors,[],'uncaught browser errors'));
   return {page,state,requests,context};
 }
@@ -150,19 +169,75 @@ test('all 160 works are retained; global search and period navigation work',asyn
   await expect(page.locator('.track:visible')).toHaveCount(6);
   await page.getByRole('button',{name:'全部作品',exact:true}).click();await expect(page.locator('.track:visible')).toHaveCount(160);
 });
-test('five Medieval works load matching samples, with safe external links and no autoplay',async t=>{
+test('public visitors never load or see private progress and notes',async t=>{
+  const {page,requests}=await app(t);
+  await expect(page.locator('#adminProgressDialog')).toBeHidden();
+  await expect(page.locator('#profileAdminProgress')).toBeHidden();
+  await expect(page.locator('.state-btn, .note-toggle, .note-panel')).toHaveCount(0);
+  assert.equal(requests.filter(r=>r.path.endsWith('/listening_progress')).length,0);
+  await page.locator('#favoritesNav').click();
+  await expect(page.getByText('登录后收藏作品')).toBeVisible();
+});
+test('personal favorites persist and can be viewed by period, composer, or as a flat list',async t=>{
+  const {page,state}=await app(t,{signedIn:true,favorites:[1,5,13]});
+  await expect(page.locator('#favoritesCount')).toHaveText('3');
+  await page.locator('#favoritesNav').click();
+  await expect(page.locator('#favoritesApp .track:visible')).toHaveCount(3);
+  await expect(page.locator('#favoritesApp .favorite-period')).toHaveCount(2);
+  await page.getByRole('button',{name:'按作曲家'}).click();
+  await expect(page.locator('#favoritesApp .composer')).toHaveCount(3);
+  const names=await page.locator('#favoritesApp .composer > summary h3').allTextContents();
+  assert.ok(names[0].startsWith('Antonio Vivaldi'));
+  await page.getByRole('button',{name:'展开全部',exact:true}).click();
+  await expect(page.locator('#favoritesApp .favorite-flat .track')).toHaveCount(3);
+  await expect(page.locator('#favorite-track-13 .favorite-track-meta')).toContainText('Vivaldi');
+  await page.locator('#favorite-track-1 .favorite-button').click();
+  await expect.poll(()=>state.favorites.has(1)).toBe(false);
+  await expect(page.locator('#favoritesApp .favorite-flat .track')).toHaveCount(2);
+  await page.reload();await expect(page.locator('#favoritesCount')).toHaveText('2');
+  await page.locator('#favoritesNav').click();await expect(page.locator('#favoritesApp .track:visible')).toHaveCount(2);
+});
+test('clicking a heart as a guest resumes the intended favorite after sign in',async t=>{
+  const {page,state}=await app(t);
+  await page.getByRole('button',{name:'收藏第 1 首',exact:true}).click();
+  await expect(page.locator('#authPanel')).toBeVisible();
+  await page.locator('#loginEmail').fill('listener@example.com');await page.locator('#loginPassword').fill('test-password-123');await page.locator('#loginSubmit').click();
+  await expect.poll(()=>state.favorites.has(1)).toBe(true);
+  await expect(page.getByRole('button',{name:'取消收藏第 1 首',exact:true})).toBeVisible();
+  await page.locator('#avatarTrigger').hover();await page.locator('#profileLogout').click();
+  await page.locator('#favoritesNav').click();await expect(page.getByText('登录后收藏作品')).toBeVisible();
+});
+test('favorites failure is reported without showing a false saved state',async t=>{
+  const {page}=await app(t,{signedIn:true,favoritesError:true});
+  await page.locator('#favoritesNav').click();await expect(page.getByText('暂时无法读取收藏')).toBeVisible();
+  await expect(page.getByRole('button',{name:'重新加载',exact:true})).toBeVisible();
+});
+test('a failed favorite write does not falsely mark the track as saved',async t=>{
+  const {page,state}=await app(t,{signedIn:true,favoritesWriteError:true});
+  await expect(page.locator('#favoritesCount')).toHaveText('0');
+  await page.getByRole('button',{name:'收藏第 1 首',exact:true}).click();
+  await expect(page.locator('#toast')).toContainText('收藏保存失败');
+  await expect(page.getByRole('button',{name:'收藏第 1 首',exact:true})).toHaveAttribute('aria-pressed','false');
+  assert.equal(state.favorites.size,0);
+});
+test('five Medieval works retain their previews and provide four honest YouTube slots and NetEase search',async t=>{
   const {page,state}=await app(t);
   for(let id=1;id<=5;id++) {
     const row=page.locator(`#track-${id}`);
-    const youtube=row.locator('.youtube');const spotify=row.locator('.spotify');
+    if(id!==1)await row.locator('.recording-versions > summary').click();
+    const youtube=row.locator('.youtube');const netease=row.locator('.neteasecloudmusic');
     assert.match(await youtube.getAttribute('href'),/^https:\/\/www.youtube.com\/results\?search_query=/);
-    assert.match(await spotify.getAttribute('href'),/^https:\/\/open.spotify.com\/search\//);
+    assert.match(await netease.getAttribute('href'),/^https:\/\/music.163.com\/#\/search\/m\//);
     assert.equal(await youtube.getAttribute('target'),'_blank');
+    await expect(row.locator('.recording-slot')).toHaveCount(4);
+    await expect(row.locator('.recording-slot-pending')).toHaveCount(4);
+    await expect(row.locator('.recording-slot a')).toHaveCount(0);
     await row.locator('.preview-button').click();await expect(row.locator('audio')).toBeVisible();
     assert.equal(await row.locator('select option').count(),1);
     assert.equal(await row.locator('audio').evaluate(audio=>audio.paused),true);
     assert.match(await row.locator('audio').getAttribute('src'),new RegExp(`test-${id}`));
   }
+  await expect(page.locator('a[href*="spotify"]')).toHaveCount(0);
   assert.equal(state.media.length,5);
   await page.locator('#track-1 audio').evaluate(audio=>audio.play());
   await page.locator('#track-2 audio').evaluate(audio=>audio.play());
@@ -204,7 +279,7 @@ test('ordinary signup with immediate session enables discussion without administ
   await page.locator('#signupName').fill('New listener');await page.locator('#signupEmail').fill('listener@example.com');await page.locator('#signupPassword').fill('test-password-123');await page.locator('#signupSubmit').click();
   await expect(page.locator('#modeLabel')).toHaveText('已登录');await expect(page.locator('#authMessage')).toContainText('参与曲目讨论');
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar',/^note-(0[1-9]|10)$/);
-  await expect(page.locator('#exportBtn')).toBeHidden();assert.equal(await page.locator('#track-1 .state-btn').isDisabled(),true);
+  await expect(page.locator('#profileAdminProgress')).toBeHidden();await expect(page.locator('#track-1 .state-btn')).toHaveCount(0);
 });
 test('hover account menu changes the avatar and nickname, persisting across a reload and existing comments',async t=>{
   const old={id:'11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa',track_id:1,user_id:USER.id,author_name:'Test listener',avatar_key:'note-03',body:'Existing comment',created_at:'2026-11-16T00:00:00Z'};
@@ -321,7 +396,7 @@ test('signing in from the discussion resumes the same thread; a member can publi
   await page.locator('#commentBody').fill('  Listen to the chant’s phrasing.  ');await page.locator('#postComment').click();
   await expect(page.locator('.comment-body')).toHaveText('Listen to the chant’s phrasing.');
   assert.deepEqual(state.posts,[{track_id:2,body:'Listen to the chant’s phrasing.'}]);
-  assert.equal(await page.locator('#track-1 .state-btn').isDisabled(),true);
+  await expect(page.locator('#track-1 .state-btn')).toHaveCount(0);
   page.once('dialog',dialog=>dialog.accept());await page.locator('.delete-comment').click();await expect(page.locator('.comment-item')).toHaveCount(0);
   assert.equal(state.deleted.length,1);
 });
@@ -342,16 +417,31 @@ test('community view supports pagination and selecting a work, and cannot delete
   await page.locator('#moreComments').click();await expect(page.locator('.comment-item')).toHaveCount(25);await expect(page.locator('#moreComments')).toBeHidden();
   await page.locator('#commentTrack').selectOption('1');await expect(page.locator('#commentForm')).toBeVisible();await expect(page.locator('#commentsDescription')).toContainText('Gregorian chant');
 });
-test('administrator can update existing shared progress and notes; export remains available',async t=>{
-  const {page,state}=await app(t,{signedIn:true,admin:true});
-  await expect(page.locator('#exportBtn')).toBeVisible();
-  await page.locator('#track-1 .state-btn').click();
+test('administrator opens private progress from the avatar, preserves old data, and updates statuses without editing notes',async t=>{
+  const {page,state,requests}=await app(t,{signedIn:true,admin:true});
+  await expect(page.locator('#adminProgressDialog')).toBeHidden();
+  await expect(page.locator('#track-1 .state-btn')).toHaveCount(0);
+  await expect(page.locator('.note-toggle, .note-panel')).toHaveCount(0);
+  await page.locator('#avatarTrigger').hover();await page.locator('#profileAdminProgress').click();
+  await expect(page.locator('#adminProgressDialog')).toBeVisible();
+  await expect(page.locator('#confirmedCount')).toHaveText('1');
+  await page.locator('.admin-period > summary').first().click();await page.locator('.admin-composer > summary').first().click();
+  await page.getByRole('checkbox',{name:/第 1 首/}).click();
   await expect.poll(()=>state.progress.length).toBeGreaterThan(0);
-  assert.equal(state.progress[0][0].status,2);
-  await page.locator('#track-1 .note-toggle').click();await page.locator('#track-1 .note-input').fill('New shared note');
-  await expect.poll(()=>state.progress.length).toBeGreaterThan(1);
-  assert.equal(state.progress.at(-1)[0].note,'New shared note');
+  assert.equal(state.progress[0].payload.status,2);
+  assert.equal('note' in state.progress[0].payload,false);
+  assert.equal(state.progressRows.get(1).note,'Listen for monophonic texture.');
+  assert.ok(requests.filter(r=>r.path.endsWith('/listening_progress')).every(r=>r.authenticated));
+  await page.getByRole('checkbox',{name:/第 2 首/}).click();
+  await expect.poll(()=>state.progressRows.get(2)?.status).toBe(1);
+  assert.equal(state.progressRows.get(2).note,'');
   const download=page.waitForEvent('download');await page.locator('#exportBtn').click();assert.match((await download).suggestedFilename(),/DMus_QE/);
+});
+test('previously queued note edits survive the transition without exposing the old notes UI',async t=>{
+  const {page,state}=await app(t,{signedIn:true,admin:true,legacyPending:{'1':{status:2,note:'A pending legacy edit',revision:1}}});
+  await expect.poll(()=>state.progressRows.get(1)?.note).toBe('A pending legacy edit');
+  assert.equal(state.progressRows.get(1).status,2);
+  await expect(page.locator('.note-toggle, .note-panel')).toHaveCount(0);
 });
 test('expired member sessions refresh before restoring the account',async t=>{
   const {page,state}=await app(t);
