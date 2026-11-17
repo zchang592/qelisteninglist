@@ -358,6 +358,22 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await expect(page.locator('a[href*="spotify"]')).toHaveCount(0);
   await expect(page.locator('.preview-button, audio')).toHaveCount(0);
 });
+test('Medieval Bilibili trial accepts a video link and collapses or switches players',async t=>{
+  const {page}=await app(t);const row=page.locator('#track-1');
+  await row.locator('.bilibili-section summary').click();
+  await expect(row.locator('.bilibili')).toHaveAttribute('href',/search\.bilibili\.com/);
+  await row.locator('.bilibili-form input').fill('https://evil.example/video/BV1xx411c7mD');
+  await row.locator('.bilibili-form button').click();await expect(row.locator('.bilibili-feedback')).toContainText('请输入');
+  await row.locator('.bilibili-form input').fill('https://www.bilibili.com/video/BV1xx411c7mD?p=2');
+  await row.locator('.bilibili-form button').click();
+  await expect(row.locator('.bilibili-embed-holder iframe')).toHaveAttribute('src','https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&page=2&autoplay=0');
+  await expect(row.locator('[data-video-link]')).toHaveAttribute('href','https://www.bilibili.com/video/BV1xx411c7mD?p=2');
+  await row.locator('.version-preview').first().click();await expect(row.locator('.bilibili-embed-holder iframe')).toHaveCount(0);
+  await expect(row.locator('[data-video-link]')).toBeHidden();
+  await row.locator('.bilibili-form button').click();await row.locator('.bilibili-section summary').click();
+  await expect(row.locator('.bilibili-embed-holder iframe')).toHaveCount(0);
+  await expect(page.locator('#track-6 .bilibili-section')).toHaveCount(0);
+});
 test('comments are rendered only in a separate modal; guests cannot post and text is escaped',async t=>{
   const {page,requests}=await app(t,{comments:[{id:'one',track_id:1,user_id:'someone-else',author_name:'A listener',body:'<img src=x onerror=alert(1)>',created_at:'2026-11-16T00:00:00Z'}]});
   assert.equal(requests.filter(r=>r.path.endsWith('listening_comments')).length,0);
@@ -394,7 +410,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -421,13 +437,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

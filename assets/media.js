@@ -59,6 +59,26 @@ export function youtubeVideoId(value) {
   } catch{return null;}
 }
 
+export function bilibiliVideo(value) {
+  const input=String(value || '').trim();
+  if(/^BV[0-9A-Za-z]{10}$/.test(input))return {id:input,page:1};
+  try {
+    const url=new URL(input);
+    if(url.protocol!=='https:' || !['www.bilibili.com','bilibili.com','m.bilibili.com'].includes(url.hostname))return null;
+    const match=url.pathname.match(/^\/video\/(BV[0-9A-Za-z]{10})(?:\/|$)/);
+    if(!match)return null;
+    const p=url.searchParams.get('p');
+    if(p!==null && (!/^[1-9]\d{0,2}$/.test(p)))return null;
+    return {id:match[1],page:p?Number(p):1};
+  }catch{return null;}
+}
+
+function clearEmbeddedPlayers() {
+  document.querySelectorAll('.youtube-embed-holder,.bilibili-embed-holder').forEach(element=>element.replaceChildren());
+  document.querySelectorAll('.version-preview').forEach(button=>button.setAttribute('aria-expanded','false'));
+  document.querySelectorAll('.bilibili-section [data-video-link]').forEach(link=>{link.hidden=true;});
+}
+
 function platformLink(name, url, logo) {
   const link = document.createElement('a');
   link.href = url;
@@ -77,14 +97,15 @@ export function createMediaControls(id, fullText) {
   versionDetails.className='recording-versions';
   versionDetails.addEventListener('toggle',()=>{
     if(!versionDetails.open){
-      versionDetails.querySelectorAll('.youtube-embed-holder').forEach(holder=>holder.replaceChildren());
+      versionDetails.querySelectorAll('.youtube-embed-holder,.bilibili-embed-holder').forEach(holder=>holder.replaceChildren());
       versionDetails.querySelectorAll('.version-preview').forEach(button=>{button.setAttribute('aria-expanded','false');});
+      versionDetails.querySelectorAll('.bilibili-section [data-video-link]').forEach(link=>{link.hidden=true;});
     }
   });
   versionDetails.open=true;
   const summary=document.createElement('summary');
   const summaryTitle=document.createElement('span');summaryTitle.className='recording-versions-title';summaryTitle.textContent='收听版本';
-  const summaryPlatforms=document.createElement('span');summaryPlatforms.className='recording-versions-platforms';summaryPlatforms.textContent='YouTube · 网易云';
+  const summaryPlatforms=document.createElement('span');summaryPlatforms.className='recording-versions-platforms';summaryPlatforms.textContent=id<=5?'YouTube · B站 · 网易云':'YouTube · 网易云';
   summary.append(icon('headphones',15),summaryTitle,summaryPlatforms,icon('chevron',14));
   const contents=document.createElement('div');contents.className='recording-versions-content';
   const header=document.createElement('div');header.className='recording-platform-header';
@@ -112,8 +133,7 @@ export function createMediaControls(id, fullText) {
       const holder=document.createElement('div');holder.className='youtube-embed-holder';
       preview.addEventListener('click',()=>{
         const open=preview.getAttribute('aria-expanded')==='true';
-        document.querySelectorAll('.youtube-embed-holder').forEach(element=>element.replaceChildren());
-        document.querySelectorAll('.version-preview').forEach(button=>button.setAttribute('aria-expanded','false'));
+        clearEmbeddedPlayers();
         if(!open){const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${entry.title || fullText} · YouTube`;
           frame.src=`https://www.youtube-nocookie.com/embed/${video}${entry.start ? `?start=${entry.start}` : ''}`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';
           holder.append(frame);preview.setAttribute('aria-expanded','true');}
@@ -127,6 +147,32 @@ export function createMediaControls(id, fullText) {
     versionList.append(row);
   }
   contents.append(versionList);
+  if(id>=1 && id<=5){
+    const bili=document.createElement('details');bili.className='recording-netease bilibili-section';
+    const biliSummary=document.createElement('summary');biliSummary.className='netease-summary';
+    const biliName=document.createElement('span');biliName.className='recording-platform-name';biliName.textContent='Bilibili';
+    biliSummary.append(biliName,icon('chevron',14));
+    const search=platformLink('在 B 站搜索',`https://search.bilibili.com/all?keyword=${encodeURIComponent(query)}`,'bilibili');
+    const form=document.createElement('form');form.className='bilibili-form';
+    const label=document.createElement('label');label.textContent='粘贴 B 站视频链接或 BV 号，试听对应版本';
+    const input=document.createElement('input');input.type='text';input.placeholder='https://www.bilibili.com/video/BV…';input.autocomplete='off';input.required=true;
+    label.append(input);
+    const submit=document.createElement('button');submit.type='submit';submit.className='secondary-btn';submit.textContent='载入播放器';
+    const feedback=document.createElement('p');feedback.className='bilibili-feedback';feedback.setAttribute('role','status');
+    const holder=document.createElement('div');holder.className='bilibili-embed-holder';
+    const open=document.createElement('a');open.className='platform-link';open.target='_blank';open.rel='noopener noreferrer';open.textContent='在 B 站打开 ↗';open.hidden=true;
+    form.append(label,submit);bili.append(biliSummary,search,form,feedback,holder,open);contents.append(bili);
+    bili.addEventListener('toggle',()=>{if(!bili.open){holder.replaceChildren();open.hidden=true;}});
+    form.addEventListener('submit',event=>{
+      event.preventDefault();const video=bilibiliVideo(input.value);
+      if(!video){feedback.textContent='请输入完整的 B 站视频链接或 BV 号。';return;}
+      feedback.textContent='';clearEmbeddedPlayers();
+      const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${fullText} · Bilibili`;
+      frame.src=`https://player.bilibili.com/player.html?bvid=${video.id}&page=${video.page}&autoplay=0`;
+      frame.allow='fullscreen; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';holder.append(frame);
+      open.href=`https://www.bilibili.com/video/${video.id}?p=${video.page}`;open.dataset.videoLink='true';open.hidden=false;
+    });
+  }
   const netease=document.createElement('details');netease.className='recording-netease';
   const neteaseSummary=document.createElement('summary');neteaseSummary.className='netease-summary';
   const neteaseName=document.createElement('span');neteaseName.className='recording-platform-name';
