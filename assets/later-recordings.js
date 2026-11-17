@@ -732,6 +732,11 @@ export const laterRecordings = {
   ],
   "92": [
     {
+      "title": "Berlioz · Symphonie fantastique · Detroit Symphony Orchestra · Jader Bignamini",
+      "url": "https://www.youtube.com/watch?v=D-QHwi0f3cI",
+      "note": "完整交响曲；底特律交响乐团现场演出。"
+    },
+    {
       "title": "Berlioz: Symphonie fantastique ∙ hr-Sinfonieorchester ∙ Alain Altinoglu · hr-Sinfonieorchester",
       "url": "https://www.youtube.com/watch?v=sdYRYbjCcJg"
     }
@@ -863,6 +868,11 @@ export const laterRecordings = {
     }
   ],
   "102": [
+    {
+      "title": "Dvořák · Cello Concerto in B minor, Op. 104 · Rostropovich / Karajan",
+      "url": "https://www.youtube.com/watch?v=t6fJO4hhRtQ",
+      "note": "完整大提琴协奏曲；附总谱。"
+    },
     {
       "title": "Dvořák: Cello Concerto in B minor, Op. 104 | Tonhalle-Orchester Zürich & Anastasia Kobekina · DW Classical Music",
       "url": "https://www.youtube.com/watch?v=wBFeeOt_SGY",

@@ -1,7 +1,7 @@
-import { earlyRecordings } from './early-recordings.js?v=1.5.6';
-import { laterRecordings } from './later-recordings.js?v=1.5.6';
+import { earlyRecordings } from './early-recordings.js?v=1.5.7';
+import { laterRecordings } from './later-recordings.js?v=1.5.7';
 import { icon } from './icons.js?v=3';
-import { workParts, scopeNotes } from './work-parts.js?v=1.5.6';
+import { workParts, scopeNotes } from './work-parts.js?v=1.5.7';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.

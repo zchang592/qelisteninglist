@@ -106,7 +106,7 @@
 - **86. Schubert — Winterreise (Gute Nacht, Der Lindenbaum, Wasserflut)**
   - No. 1 · Gute Nacht：[首选 YouTube](https://www.youtube.com/watch?v=wIw1OiLyZZk)
   - No. 5 · Der Lindenbaum：[首选 YouTube](https://www.youtube.com/watch?v=jyxMMg6bxrg)
-  - No. 6 · Wasserflut：[首选 YouTube](https://www.youtube.com/watch?v=bFG8nUJ8qdM)
+  - No. 6 · Wasserflut：[首选 YouTube](https://www.youtube.com/watch?v=-JDXRY_4Sw8)
 - **87. Schumann — Symphony No. 3 in E♭ major, Rhenish**：[首选 YouTube](https://www.youtube.com/watch?v=aTDK3OEVVZw)
 - **88. Schumann — Piano Quintet in E♭ major, Op. 44**：[首选 YouTube](https://www.youtube.com/watch?v=rHsvD6_gRyo)
 - **89. Schumann — Dichterliebe, Op. 48 (Im wunderschönen Monat Mai, Ich grolle nicht, Am leuchtenden Sommermorgen)**
@@ -115,7 +115,7 @@
   - No. 12 · Am leuchtenden Sommermorgen：[首选 YouTube](https://www.youtube.com/watch?v=ZF4yLMob3Ko)
 - **90. Mendelssohn — Symphony No. 4 in A major, Italian**：[首选 YouTube](https://www.youtube.com/watch?v=_HX_jF1_Tgc)
 - **91. Mendelssohn — Violin Concerto in E minor**：[首选 YouTube](https://www.youtube.com/watch?v=I03Hs6dwj7E)
-- **92. Berlioz — Symphonie fantastique**：[首选 YouTube](https://www.youtube.com/watch?v=sdYRYbjCcJg)
+- **92. Berlioz — Symphonie fantastique**：[首选 YouTube](https://www.youtube.com/watch?v=D-QHwi0f3cI)
 - **93. Brahms — Symphony No. 1 in C minor**：[首选 YouTube](https://www.youtube.com/watch?v=ctV9mgwk9eY)
 - **94. Brahms — Symphony No. 4 in E minor**：[首选 YouTube](https://www.youtube.com/watch?v=o69YVL_XKJo)
 - **95. Brahms — Violin Concerto in D major**：[首选 YouTube](https://www.youtube.com/watch?v=UFl9xuYP5T8)
@@ -125,7 +125,7 @@
 - **99. Tchaikovsky — Violin Concerto in D major**：[首选 YouTube](https://www.youtube.com/watch?v=2Q_DzWUvcL8)
 - **100. Tchaikovsky — Piano Concerto No. 1 in B♭ minor**：[首选 YouTube](https://www.youtube.com/watch?v=2DmfJu3oNDM)
 - **101. Dvořák — Symphony No. 9 in E minor, From the New World**：[首选 YouTube](https://www.youtube.com/watch?v=jOofzffyDSA)
-- **102. Dvořák — Cello Concerto in B minor**：[首选 YouTube](https://www.youtube.com/watch?v=wBFeeOt_SGY)
+- **102. Dvořák — Cello Concerto in B minor**：[首选 YouTube](https://www.youtube.com/watch?v=t6fJO4hhRtQ)
 - **103. Dvořák — Piano Quintet No. 2 in A major**：[首选 YouTube](https://www.youtube.com/watch?v=eFMV63zy-Xk)
 - **104. Bruckner — Symphony No. 7 in E major**：[首选 YouTube](https://www.youtube.com/watch?v=BYjbGNuLxW0)
 - **105. Mahler — Symphony No. 1 in D major, Titan**：[首选 YouTube](https://www.youtube.com/watch?v=_MjEp_SAfS0)
@@ -192,7 +192,7 @@
 - **147. Messiaen — Turangalîla-Symphonie (Movements II, V, VI)**
   - II · Chant d’amour I：[首选 YouTube](https://www.youtube.com/watch?v=-oYuZVrCX10)
   - V · Joie du sang des étoiles：[首选 YouTube](https://www.youtube.com/watch?v=Tv67YkOWJNA)
-  - VI · Jardin du sommeil d’amour：[首选 YouTube](https://www.youtube.com/watch?v=ZsHfOElDtaM)
+  - VI · Jardin du sommeil d’amour：[首选 YouTube](https://www.youtube.com/watch?v=PkDq1t7Ycc4)
 - **148. Boulez — Le Marteau sans maître (The Hammer without a Master) (Movements I, VIII)**
   - I · Avant ‘L’Artisanat furieux’：[首选 YouTube](https://www.youtube.com/watch?v=slKzzo3AYTc)
   - VIII · Commentaire III de ‘Bourreaux de solitude’：[首选 YouTube](https://www.youtube.com/watch?v=Ngl2Pe0McAk)
@@ -200,7 +200,7 @@
   - No. 1 · Désordre：[首选 YouTube](https://www.youtube.com/watch?v=6WHdNub6Agk)
   - No. 4 · Fanfares：[首选 YouTube](https://www.youtube.com/watch?v=UrRmZkaBImI)
   - No. 5 · Arc-en-ciel：[首选 YouTube](https://www.youtube.com/watch?v=ELZk7mNbs9I)
-  - No. 6 · Automne à Varsovie：[首选 YouTube](https://www.youtube.com/watch?v=u047t1SOByE)
+  - No. 6 · Automne à Varsovie：[首选 YouTube](https://www.youtube.com/watch?v=CslIcmVdIa8)
 - **150. Ligeti — Atmosphères (for orchestra)**：[首选 YouTube](https://www.youtube.com/watch?v=RCNzwdLwA8g)
 - **151. John Adams — Nixon in China (Act I)**：[首选 YouTube](https://www.youtube.com/watch?v=cqKZIzZPLgg)
 - **152. Crumb — Voices of Ancient Children (for mezzo-soprano and percussion)**：[首选 YouTube](https://www.youtube.com/watch?v=D8UVHeixOyE) — 原清单作品名称和编制需要核对。

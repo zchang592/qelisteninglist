@@ -1,6 +1,6 @@
 import { icon } from './icons.js?v=3';
-import { createMediaControls } from './media.js?v=1.5.6';
-import { selectedSingleTracks, workParts } from './work-parts.js?v=1.5.6';
+import { createMediaControls } from './media.js?v=1.5.7';
+import { selectedSingleTracks, workParts } from './work-parts.js?v=1.5.7';
 
 const $=id=>document.getElementById(id);
 const normalise=value=>value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase();

@@ -1,7 +1,7 @@
 // Only split multiple selections explicitly named in the source; catalogue IDs stay unchanged.
 const specific = entries => entries.map(([name,video,start])=>({name,video,start}));
 export const workParts = {
-  86:specific([['No. 1 · Gute Nacht','wIw1OiLyZZk'],['No. 5 · Der Lindenbaum','jyxMMg6bxrg'],['No. 6 · Wasserflut','bFG8nUJ8qdM']]),
+  86:specific([['No. 1 · Gute Nacht','wIw1OiLyZZk'],['No. 5 · Der Lindenbaum','jyxMMg6bxrg'],['No. 6 · Wasserflut','-JDXRY_4Sw8']]),
   89:specific([['No. 1 · Im wunderschönen Monat Mai','00-7gHZLWC0'],['No. 7 · Ich grolle nicht','jf8WvfCTd7M'],['No. 12 · Am leuchtenden Sommermorgen','ZF4yLMob3Ko']]),
   117:specific([['Overture','L0HYxNb0-eI'],['Una voce poco fa','q3UNeqTHfgQ'],['Largo al factotum','6EZ-tjip_uY']]),
   118:specific([['Libiamo ne’ lieti calici','afhAqMeeQJk'],['Sempre libera','ooHtAm_-5Yo']]),
@@ -10,9 +10,9 @@ export const workParts = {
   137:specific([["IV · The Night’s Music",'13AfuAIYU6o'],['V · The Chase','N_aCRA8tcH4']]),
   138:specific([['I · Allegro','5aJe5U_6aMI',0],['II · Prestissimo, con sordino','5aJe5U_6aMI',432],['V · Allegro molto','5aJe5U_6aMI',1182]]),
   144:specific([['I · Moderato','TSvsVvrzuN8'],['II · Allegro','C2T97GsY0nI']]),
-  147:specific([["II · Chant d’amour I",'-oYuZVrCX10'],['V · Joie du sang des étoiles','Tv67YkOWJNA'],["VI · Jardin du sommeil d’amour",'ZsHfOElDtaM']]),
+  147:specific([["II · Chant d’amour I",'-oYuZVrCX10'],['V · Joie du sang des étoiles','Tv67YkOWJNA'],["VI · Jardin du sommeil d’amour",'PkDq1t7Ycc4']]),
   148:specific([["I · Avant ‘L’Artisanat furieux’",'slKzzo3AYTc'],["VIII · Commentaire III de ‘Bourreaux de solitude’",'Ngl2Pe0McAk']]),
-  149:specific([['No. 1 · Désordre','6WHdNub6Agk'],['No. 4 · Fanfares','UrRmZkaBImI'],['No. 5 · Arc-en-ciel','ELZk7mNbs9I'],['No. 6 · Automne à Varsovie','u047t1SOByE']]),
+  149:specific([['No. 1 · Désordre','6WHdNub6Agk'],['No. 4 · Fanfares','UrRmZkaBImI'],['No. 5 · Arc-en-ciel','ELZk7mNbs9I'],['No. 6 · Automne à Varsovie','CslIcmVdIa8']]),
   153:specific([['I · Allegro energico','3jmd4rC6MW4'],['IV · Fuga','9cQd7uwmKII']]),
   158:specific([['Variation 1','u1uouugnTCo'],['Variation 2','7uBqQYspZHA'],['Variation 3','U6vOKAJimaE'],['Variation 4','RlQO5wx-c88'],['Variation 5','eSe0XvzrwQY'],['Variation 6','BfTsgl21q5M']]),
   160:[{name:'I · Movement I',video:'XxsRMvlbEvQ'},{name:'V · Movement V',unresolved:true}],

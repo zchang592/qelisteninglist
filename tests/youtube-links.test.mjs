@@ -46,3 +46,12 @@ test('part listings keep source tracks and explicitly flagged ambiguous scopes',
   assert.equal(workParts[160][1].unresolved,true);
   assert.match(scopeNotes[39],/没有指定/);assert.match(scopeNotes[160],/四个段落/);
 });
+
+test('replacement selections match the reported works and leave the disputed fifth movement unresolved',()=>{
+  assert.equal(workParts[86].find(part=>part.name.includes('Wasserflut')).video,'-JDXRY_4Sw8');
+  assert.equal(youtubeRecordings[92][0].url,'https://www.youtube.com/watch?v=D-QHwi0f3cI');
+  assert.equal(youtubeRecordings[102][0].url,'https://www.youtube.com/watch?v=t6fJO4hhRtQ');
+  assert.equal(workParts[147].find(part=>part.name.startsWith('VI')).video,'PkDq1t7Ycc4');
+  assert.equal(workParts[149].find(part=>part.name.startsWith('No. 6')).video,'CslIcmVdIa8');
+  assert.equal(workParts[160].find(part=>part.name.startsWith('V ·')).unresolved,true);
+});
