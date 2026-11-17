@@ -1,5 +1,6 @@
 import { icon } from './icons.js?v=3';
-import { createMediaControls } from './media.js?v=1.5.5';
+import { createMediaControls } from './media.js?v=1.5.6';
+import { selectedSingleTracks, workParts } from './work-parts.js?v=1.5.6';
 
 const $=id=>document.getElementById(id);
 const normalise=value=>value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase();
@@ -46,6 +47,7 @@ export function buildLibrary({data,app,favorites,makeButton,openComments,openAut
     const heading=document.createElement('h4');heading.className='work-name';heading.textContent=movement>=0?titleOnly.slice(0,movement):titleOnly;
     title.append(heading);
     if(movement>=0){const context=document.createElement('p');context.className='work-context';context.textContent=titleOnly.slice(movement+2);title.append(context);}
+    if(selectedSingleTracks.has(id)||workParts[id]){const marker=document.createElement('span');marker.className='selection-marker';marker.textContent='原清单指定选段';title.append(marker);}
     if(location==='favorite-flat'){
       const meta=document.createElement('p');meta.className='favorite-track-meta';meta.textContent=`${composer} · ${period}`;title.append(meta);
     }

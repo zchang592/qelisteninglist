@@ -58,4 +58,4 @@ The independent editorial entrance is `home.html`. The original site URL and `in
 
 The five Medieval works also include user-provided MP3 recordings in `assets/audio/medieval/`. The player loads audio on demand. Recording identification and source links match the first YouTube versions listed in `assets/media.js`.
 
-Multi-movement works and selected excerpts are catalogued in `assets/work-parts.js`; the review and unresolved scope questions are listed in `docs/multi-part-audit.md`. Per-part searches are labelled as searches, not verified recordings.
+Explicitly selected excerpts are catalogued in `assets/work-parts.js`; complete works stay together. The review and unresolved scope questions are in `docs/multi-part-audit.md`. Generate the preferred YouTube lists with `node scripts/generate-first-choice.mjs`.

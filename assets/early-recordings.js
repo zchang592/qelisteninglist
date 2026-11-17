@@ -189,6 +189,11 @@ export const earlyRecordings = {
   ],
   "19": [
     {
+      "title": "Bach: Brandenburg Concerto No. 2 in F major, BWV 1047, I. Allegro · Chamber Music Society of Lincoln Center",
+      "url": "https://www.youtube.com/watch?v=NwCh4spYRwg",
+      "note": "部分视频为完整协奏曲，第一乐章在开头。"
+    },
+    {
       "title": "Bach: Brandenburg Concerto No. 2 | Claudio Abbado & the Orchestra Mozart · DW Classical Music",
       "url": "https://www.youtube.com/watch?v=VC24gV1o7XQ",
       "note": "部分视频为完整协奏曲，第一乐章在开头。"
@@ -196,11 +201,6 @@ export const earlyRecordings = {
     {
       "title": "Bach - 'Brandenburg' Concerto no. 2 in F major BWV 1047 - Sato | Netherlands Bach Society · Netherlands Bach Society",
       "url": "https://www.youtube.com/watch?v=t8rYzpC-d44",
-      "note": "部分视频为完整协奏曲，第一乐章在开头。"
-    },
-    {
-      "title": "Bach: Brandenburg Concerto No. 2 in F major, BWV 1047, I. Allegro · Chamber Music Society of Lincoln Center",
-      "url": "https://www.youtube.com/watch?v=NwCh4spYRwg",
       "note": "部分视频为完整协奏曲，第一乐章在开头。"
     }
   ],
@@ -384,6 +384,11 @@ export const earlyRecordings = {
   ],
   "33": [
     {
+      "title": "Overture from \"Royal Fireworks Music\", HWV 351 by Georg Friedrich Händel · Qatar Philharmonic",
+      "url": "https://www.youtube.com/watch?v=Al-9FOTg0lY",
+      "note": "部分视频为完整组曲，序曲在开头。"
+    },
+    {
       "title": "Handel - Music for the Royal Fireworks HWV351 - Handel for All 4K · The English Concert",
       "url": "https://www.youtube.com/watch?v=EkttBYzD-jY",
       "note": "部分视频为完整组曲，序曲在开头。"
@@ -391,11 +396,6 @@ export const earlyRecordings = {
     {
       "title": "Händel: Feuerwerksmusik ∙ hr-Sinfonieorchester ∙ Richard Egarr · hr-Sinfonieorchester – Frankfurt Radio Symphony",
       "url": "https://www.youtube.com/watch?v=x5Ek5uJLI3U",
-      "note": "部分视频为完整组曲，序曲在开头。"
-    },
-    {
-      "title": "Overture from \"Royal Fireworks Music\", HWV 351 by Georg Friedrich Händel · Qatar Philharmonic",
-      "url": "https://www.youtube.com/watch?v=Al-9FOTg0lY",
       "note": "部分视频为完整组曲，序曲在开头。"
     }
   ],
@@ -443,13 +443,13 @@ export const earlyRecordings = {
   ],
   "37": [
     {
-      "title": "George Frideric Handel - See, the conquering hero comes, Judas Maccabaeus · aniMIDIfy",
-      "url": "https://www.youtube.com/watch?v=-ou0lXyOZH0",
+      "title": "Handel: Judas Maccabaeus HWV 63 / Part 3: 58. \"See, The Conqu'ring Hero Comes!..See, The... · English Chamber Orchestra - Topic",
+      "url": "https://www.youtube.com/watch?v=Ok1Hqbfsn0w",
       "note": "部分版本的曲目编号不同，请以曲名辨认。"
     },
     {
-      "title": "Handel: Judas Maccabaeus HWV 63 / Part 3: 58. \"See, The Conqu'ring Hero Comes!..See, The... · English Chamber Orchestra - Topic",
-      "url": "https://www.youtube.com/watch?v=Ok1Hqbfsn0w",
+      "title": "George Frideric Handel - See, the conquering hero comes, Judas Maccabaeus · aniMIDIfy",
+      "url": "https://www.youtube.com/watch?v=-ou0lXyOZH0",
       "note": "部分版本的曲目编号不同，请以曲名辨认。"
     }
   ],
@@ -468,6 +468,11 @@ export const earlyRecordings = {
     }
   ],
   "39": [
+    {
+      "title": "François Couperin · Pièces de clavecin · 第二册完整录音 · Elena Chupakhina",
+      "url": "https://www.youtube.com/watch?v=DwP7sYCy_iQ",
+      "note": "涵盖第二册第 6–12 组曲；原清单未指定册数，不能代表全部四册。"
+    },
     {
       "title": "François Couperin: Pièces de clavecin: Book 2: Ordre 8 in B Minor – Passacaille in B Minor · Anton Heiller - Topic",
       "url": "https://www.youtube.com/watch?v=0YxePsazwHU",

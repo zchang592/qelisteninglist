@@ -37,9 +37,12 @@ test('part listings keep source tracks and explicitly flagged ambiguous scopes',
   const ids=new Set(data.flatMap(([,cs])=>cs.flatMap(([,tracks])=>tracks.map(([id])=>id))));
   for(const [id,parts] of Object.entries(workParts)){
     assert.ok(ids.has(Number(id)));assert.ok(parts.length>1);
-    for(const part of parts){assert.ok(part.name);if(part.video)assert.ok(youtubeVideoId(`https://www.youtube.com/watch?v=${part.video}`));}
+    for(const part of parts){assert.ok(part.name);if(!part.unresolved)assert.ok(youtubeVideoId(`https://www.youtube.com/watch?v=${part.video}`));}
   }
   assert.deepEqual(workParts[138].map(p=>p.start),[0,432,1182]);
   assert.equal(workParts[149].length,4);
+  assert.equal(workParts[158].length,6);
+  for(const id of [39,67,81,123,145])assert.equal(workParts[id],undefined);
+  assert.equal(workParts[160][1].unresolved,true);
   assert.match(scopeNotes[39],/没有指定/);assert.match(scopeNotes[160],/四个段落/);
 });

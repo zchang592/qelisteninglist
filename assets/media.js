@@ -1,7 +1,7 @@
-import { earlyRecordings } from './early-recordings.js?v=1.2.0';
-import { laterRecordings } from './later-recordings.js?v=1.5.4';
+import { earlyRecordings } from './early-recordings.js?v=1.5.6';
+import { laterRecordings } from './later-recordings.js?v=1.5.6';
 import { icon } from './icons.js?v=3';
-import { workParts, scopeNotes } from './work-parts.js?v=1.5.5';
+import { workParts, scopeNotes } from './work-parts.js?v=1.5.6';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -142,8 +142,8 @@ export function createMediaControls(id, fullText) {
     const note=document.createElement('p');note.className='work-scope-note';note.textContent=scopeNotes[id];contents.append(note);
   }
   if(workParts[id]){
-    const parts=document.createElement('details');parts.className='work-parts';
-    const partsSummary=document.createElement('summary');partsSummary.append(document.createTextNode('乐章 / 选曲'),icon('chevron',14));
+    const parts=document.createElement('details');parts.className='work-parts';parts.open=true;
+    const partsSummary=document.createElement('summary');partsSummary.append(document.createTextNode('原清单指定的乐章 / 选曲'),icon('chevron',14));
     const partsList=document.createElement('div');partsList.className='work-parts-list';
     const workQuery=fullText.replace(/\s*\((?:Movements?|Nos\.|Variations?)\b[^)]*\)/gi,'');
     for(const part of workParts[id]){
@@ -158,6 +158,9 @@ export function createMediaControls(id, fullText) {
         });
         item.append(button,link,holder);
         if(part.start!==undefined){const note=document.createElement('small');note.className='work-part-note';note.textContent='完整录音定位';item.append(note);}
+      }else if(part.unresolved){
+        const name=document.createElement('span');name.className='work-part-name';name.textContent=part.name;
+        const pending=document.createElement('span');pending.className='work-part-note';pending.textContent='待核对';item.append(name,pending);
       }else{
         const name=document.createElement('span');name.className='work-part-name';name.textContent=part.name;
         const search=platformLink('搜索',`https://www.youtube.com/results?search_query=${encodeURIComponent(`${workQuery} ${part.name}`)}`,'part-search');search.setAttribute('aria-label',`在 YouTube 搜索 ${part.name}（新标签页）`);
