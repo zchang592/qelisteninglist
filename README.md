@@ -27,7 +27,7 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 
-YouTube recordings are listed in `assets/media.js`, `assets/early-recordings.js`, and `assets/later-recordings.js`. YouTube search and public video metadata help identify candidates; listeners should check interpretation, movement and version against the source list. Some works still await verified links and keep a search button. The NetEase button opens a platform search, subject to availability and regional restrictions. A YouTube video link supplies an inline player and an external link. No recording is played automatically.
+YouTube recordings are listed in `assets/media.js`, `assets/early-recordings.js`, and `assets/later-recordings.js`. YouTube search and public video metadata help identify candidates; listeners should check interpretation, movement and version against the source list. All 160 works have at least one candidate recording; availability and interpretation can vary. The NetEase button opens a platform search, subject to availability and regional restrictions. A YouTube video link supplies an inline player and an external link. No recording is played automatically.
 
 The five Medieval works offer an experimental Bilibili player. Because Bilibili search required verification during development, no work-specific video has been preselected; a listener can search and paste an official video URL or BV ID to test an embed. The supplied link is only used in the browser and is not saved or published. Availability, login and regional restrictions are controlled by Bilibili.
 
@@ -50,7 +50,7 @@ Push static files to `main`. In GitHub **Settings → Pages**, select **Deploy f
 
 The redesign follows [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)'s `design-taste-frontend` guidance for typography, spacing, restrained motion, real platform icons, keyboard access, and browser verification. This is a working catalog app: period navigation and readable work rows take precedence over the skill's company-landing-page sections and full-screen effects.
 
-Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. No recordings are hosted in this repository.
+Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. The five Medieval MP3 files are hosted in this repository.
 
 Release metadata: when publishing, increment the version in package.json/package-lock.json and the account menu in index.html, update its UTC timestamp, and refresh changed module/cache query versions.
 

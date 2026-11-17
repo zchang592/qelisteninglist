@@ -364,6 +364,14 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   }
   await expect(page.locator('#track-6 audio')).toHaveCount(0);
   const firstAudio=page.locator('#track-1 audio');
+  await expect(firstAudio).toBeVisible();
+  await page.locator('#track-1 .recording-versions:not(.other-platforms) > summary').click();
+  await expect(firstAudio).toBeVisible();
+  await page.locator('#track-1 .recording-versions:not(.other-platforms) > summary').click();
+  await expect(page.locator('#track-1 .other-platforms')).not.toHaveAttribute('open','');
+  await page.locator('#track-1 .other-platforms > summary').click();
+  await expect(page.locator('#track-1 .bilibili')).toBeVisible();
+  await expect(page.locator('#track-1 .neteasecloudmusic')).toBeVisible();
   await firstAudio.evaluate(audio=>audio.play());
   await expect.poll(()=>firstAudio.evaluate(audio=>audio.paused)).toBe(false);
   await page.locator('#track-2 audio').evaluate(audio=>audio.play());
@@ -373,6 +381,7 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
 });
 test('Medieval Bilibili trial accepts a video link and collapses or switches players',async t=>{
   const {page}=await app(t);const row=page.locator('#track-1');
+  await row.locator('.other-platforms > summary').click();
   await row.locator('.bilibili-section summary').click();
   await expect(row.locator('.bilibili')).toHaveAttribute('href',/search\.bilibili\.com/);
   await row.locator('.bilibili-form input').fill('https://evil.example/video/BV1xx411c7mD');
@@ -423,7 +432,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -450,13 +459,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

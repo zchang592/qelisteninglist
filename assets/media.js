@@ -1,5 +1,5 @@
 import { earlyRecordings } from './early-recordings.js?v=1.2.0';
-import { laterRecordings } from './later-recordings.js?v=1.5.0';
+import { laterRecordings } from './later-recordings.js?v=1.5.4';
 import { icon } from './icons.js?v=3';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
@@ -109,7 +109,6 @@ export function createMediaControls(id, fullText) {
   versionDetails.className='recording-versions';
   versionDetails.addEventListener('toggle',()=>{
     if(!versionDetails.open){
-      versionDetails.querySelectorAll('audio').forEach(audio=>audio.pause());
       versionDetails.querySelectorAll('.youtube-embed-holder,.bilibili-embed-holder').forEach(holder=>holder.replaceChildren());
       versionDetails.querySelectorAll('.version-preview').forEach(button=>{button.setAttribute('aria-expanded','false');});
       versionDetails.querySelectorAll('.bilibili-section [data-video-link]').forEach(link=>{link.hidden=true;});
@@ -117,9 +116,8 @@ export function createMediaControls(id, fullText) {
   });
   versionDetails.open=true;
   const summary=document.createElement('summary');
-  const summaryTitle=document.createElement('span');summaryTitle.className='recording-versions-title';summaryTitle.textContent='收听版本';
-  const summaryPlatforms=document.createElement('span');summaryPlatforms.className='recording-versions-platforms';summaryPlatforms.textContent=id<=5?'YouTube · B站 · 网易云':'YouTube · 网易云';
-  summary.append(icon('headphones',15),summaryTitle,summaryPlatforms,icon('chevron',14));
+  const summaryTitle=document.createElement('span');summaryTitle.className='recording-versions-title';summaryTitle.textContent='YouTube 录音版本';
+  summary.append(icon('headphones',15),summaryTitle,icon('chevron',14));
   const contents=document.createElement('div');contents.className='recording-versions-content';
   const local=localRecordings[id];
   if(local){
@@ -129,7 +127,7 @@ export function createMediaControls(id, fullText) {
     const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`./assets/audio/medieval/${local[0]}`;
     audio.setAttribute('aria-label',`${fullText} · ${local[1]}`);
     audio.addEventListener('play',()=>{document.querySelectorAll('.local-recording audio').forEach(other=>{if(other!==audio)other.pause();});clearEmbeddedPlayers();});
-    player.append(label,credit,audio);contents.append(player);
+    player.append(label,credit,audio);block.append(player);
   }
   const header=document.createElement('div');header.className='recording-platform-header';
   const platformName=document.createElement('span');platformName.className='recording-platform-name';
@@ -170,12 +168,22 @@ export function createMediaControls(id, fullText) {
     versionList.append(row);
   }
   contents.append(versionList);
+  versionDetails.append(summary,contents);block.append(versionDetails);
+  const other=document.createElement('details');other.className='recording-versions other-platforms';
+  const otherSummary=document.createElement('summary');
+  const otherTitle=document.createElement('span');otherTitle.className='recording-versions-title';otherTitle.textContent='其他平台搜索';
+  otherSummary.append(icon('external',15),otherTitle,icon('chevron',14));
+  const otherContents=document.createElement('div');otherContents.className='recording-versions-content';
+  const links=document.createElement('div');links.className='other-platform-links';
+  const biliSearch=platformLink('在 B 站搜索',`https://search.bilibili.com/all?keyword=${encodeURIComponent(query)}`,'bilibili');
+  const neteaseSearch=platformLink('在网易云搜索',`https://music.163.com/#/search/m/?s=${encodeURIComponent(query)}&type=1`,'neteasecloudmusic');
+  neteaseSearch.setAttribute('aria-label',`在网易云音乐搜索第 ${id} 首作品（新标签页）`);
+  links.append(biliSearch,neteaseSearch);otherContents.append(links);
   if(id>=1 && id<=5){
     const bili=document.createElement('details');bili.className='recording-netease bilibili-section';
     const biliSummary=document.createElement('summary');biliSummary.className='netease-summary';
-    const biliName=document.createElement('span');biliName.className='recording-platform-name';biliName.textContent='Bilibili';
+    const biliName=document.createElement('span');biliName.className='recording-platform-name';biliName.textContent='B 站链接播放器（可选）';
     biliSummary.append(biliName,icon('chevron',14));
-    const search=platformLink('在 B 站搜索',`https://search.bilibili.com/all?keyword=${encodeURIComponent(query)}`,'bilibili');
     const form=document.createElement('form');form.className='bilibili-form';
     const label=document.createElement('label');label.textContent='粘贴 B 站视频链接或 BV 号，试听对应版本';
     const input=document.createElement('input');input.type='text';input.placeholder='https://www.bilibili.com/video/BV…';input.autocomplete='off';input.required=true;
@@ -184,7 +192,7 @@ export function createMediaControls(id, fullText) {
     const feedback=document.createElement('p');feedback.className='bilibili-feedback';feedback.setAttribute('role','status');
     const holder=document.createElement('div');holder.className='bilibili-embed-holder';
     const open=document.createElement('a');open.className='platform-link';open.target='_blank';open.rel='noopener noreferrer';open.textContent='在 B 站打开 ↗';open.hidden=true;
-    form.append(label,submit);bili.append(biliSummary,search,form,feedback,holder,open);contents.append(bili);
+    form.append(label,submit);bili.append(biliSummary,form,feedback,holder,open);otherContents.append(bili);
     bili.addEventListener('toggle',()=>{if(!bili.open){holder.replaceChildren();open.hidden=true;}});
     form.addEventListener('submit',event=>{
       event.preventDefault();const video=bilibiliVideo(input.value);
@@ -196,14 +204,7 @@ export function createMediaControls(id, fullText) {
       open.href=`https://www.bilibili.com/video/${video.id}?p=${video.page}`;open.dataset.videoLink='true';open.hidden=false;
     });
   }
-  const netease=document.createElement('details');netease.className='recording-netease';
-  const neteaseSummary=document.createElement('summary');neteaseSummary.className='netease-summary';
-  const neteaseName=document.createElement('span');neteaseName.className='recording-platform-name';
-  const neteaseIcon=document.createElement('img');neteaseIcon.src='./assets/icons/neteasecloudmusic.svg';neteaseIcon.alt='';neteaseIcon.width=16;neteaseIcon.height=16;
-  neteaseName.append(neteaseIcon,document.createTextNode('网易云音乐'));
-  const neteaseSearch=platformLink('打开搜索',`https://music.163.com/#/search/m/?s=${encodeURIComponent(query)}&type=1`,'neteasecloudmusic');
-  neteaseSearch.setAttribute('aria-label',`在网易云音乐搜索第 ${id} 首作品（新标签页）`);
-  neteaseSummary.append(neteaseName,icon('chevron',14));netease.append(neteaseSummary,neteaseSearch);contents.append(netease);versionDetails.append(summary,contents);
-  block.append(versionDetails);
+  other.addEventListener('toggle',()=>{if(!other.open){other.querySelectorAll('.bilibili-embed-holder').forEach(holder=>holder.replaceChildren());other.querySelectorAll('[data-video-link]').forEach(link=>{link.hidden=true;});}});
+  other.append(otherSummary,otherContents);block.append(other);
   return block;
 }

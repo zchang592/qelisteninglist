@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=3';
-import { createMediaControls } from './media.js?v=1.5.3';
+import { createMediaControls } from './media.js?v=1.5.4';
 
 const $=id=>document.getElementById(id);
 const normalise=value=>value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase();
@@ -50,7 +50,9 @@ export function buildLibrary({data,app,favorites,makeButton,openComments,openAut
       const meta=document.createElement('p');meta.className='favorite-track-meta';meta.textContent=`${composer} · ${period}`;title.append(meta);
     }
     row.append(number,title);
-    row.append(createMediaControls(id,fullText));
+    const media=createMediaControls(id,fullText);
+    const audio=media.querySelector('.local-recording');if(audio)title.append(audio);
+    row.append(media);
     const footer=document.createElement('div');footer.className='track-footer';
     const actions=document.createElement('div');actions.className='actions';
     const discuss=document.createElement('button');discuss.type='button';discuss.className='copy comment-button';

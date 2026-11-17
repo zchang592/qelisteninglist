@@ -1497,5 +1497,34 @@ export const laterRecordings = {
       "note": "音乐会还包含其他作品；本曲从 10:25 开始，清单指定变奏 1–6。",
       "url": "https://www.youtube.com/watch?v=HWyc-fKM2Wc"
     }
+  ],
+  "138": [
+    {"title":"Bartók · String Quartet No. 4 · Quatuor Ébène", "url":"https://www.youtube.com/watch?v=E_XNfKk-Qbs", "note":"完整五个乐章；清单指定 I、II、V。"},
+    {"title":"Bartók · String Quartet No. 4 · Fibonacci Quartet", "url":"https://www.youtube.com/watch?v=5aJe5U_6aMI", "note":"完整五个乐章；视频说明标注 I 00:00、II 07:12、V 19:42。"}
+  ],
+  "151": [
+    {"title":"John Adams · Nixon in China · Act I · 1987 首演", "url":"https://www.youtube.com/watch?v=cqKZIzZPLgg", "note":"第一幕；休斯敦大歌剧院首演录音。"}
+  ],
+  "155": [
+    {"title":"Steve Reich · Piano Phase · Double Edge", "url":"https://www.youtube.com/watch?v=6MArl7T-_As", "note":"双钢琴录音；部分地区可能无法播放。"},
+    {"title":"Steve Reich · Piano Phase · 附总谱", "url":"https://www.youtube.com/watch?v=wNVzDGnkbDI", "note":"音频与乐谱对照。"}
+  ],
+  "156": [
+    {"title":"Dutilleux · L’arbre des songes · 小提琴协奏曲", "url":"https://www.youtube.com/watch?v=EDVFNh7MDQk", "note":"完整协奏曲；视频说明标注各段落时间。"},
+    {"title":"Dutilleux · L’arbre des songes · Renaud Capuçon", "url":"https://www.youtube.com/watch?v=gRmIV8efTyQ", "note":"现场演出；Renaud Capuçon 小提琴、Tugan Sokhiev 指挥。"}
+  ],
+  "157": [
+    {"title":"Penderecki · Threnody for the Victims of Hiroshima · Antoni Wit", "url":"https://www.youtube.com/watch?v=Dp3BlFZWJNA", "note":"波兰国家广播交响乐团，Antoni Wit 指挥。"},
+    {"title":"Penderecki · Threnody · Finnish Radio Symphony Orchestra", "url":"https://www.youtube.com/watch?v=Pu371CDZ0ws", "note":"芬兰广播交响乐团，Krzysztof Urbański 指挥。"},
+    {"title":"Penderecki · Threnody · Sinfonia Varsovia", "url":"https://www.youtube.com/watch?v=BQuFP7sLzfc", "note":"Sinfonia Varsovia，Krzysztof Urbański 指挥。"}
+  ],
+  "159": [
+    {"title":"Takemitsu · November Steps · 附总谱", "url":"https://www.youtube.com/watch?v=qcT_j9Dzt9Y", "note":"尺八、琵琶与管弦乐；音频与乐谱对照。"},
+    {"title":"Takemitsu · November Steps · NHK Symphony Orchestra", "url":"https://www.youtube.com/watch?v=NaGTdSR1o88", "start":56, "note":"现场演出，Charles Dutoit 指挥；演奏从 00:56 开始。"},
+    {"title":"Takemitsu · November Steps · Saito Kinen Orchestra", "url":"https://www.youtube.com/watch?v=EzKCPrZ9ywc", "note":"视频说明列出横山胜也、鹤田锦史与小泽征尔。"}
+  ],
+  "160": [
+    {"title":"Lutosławski · Jeux vénitiens · Antoni Wit", "url":"https://www.youtube.com/watch?v=34V7uPbYTZk", "note":"视频列出四个段落；原清单写 I、V，乐章编号有疑问，待核对。"},
+    {"title":"Lutosławski · Venetian Games", "url":"https://www.youtube.com/watch?v=uIN5euk7qN8", "note":"作品完整录音；原清单写 I、V，乐章编号有疑问，待核对。"}
   ]
 };
