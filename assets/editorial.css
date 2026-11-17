@@ -28,6 +28,14 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Micro
 .other-platforms{margin-top:8px}
 .other-platform-links{display:flex;flex-wrap:wrap;gap:8px 22px}
 .other-platform-links .platform-link{font-size:11px;min-height:40px;color:var(--ink)}
+.work-parts{margin:10px 0;border:1px solid var(--stroke);border-radius:4px}
+.work-parts>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:42px;padding:9px 11px;cursor:pointer;color:var(--ink);font-size:11px;font-weight:650}
+.work-parts[open]>summary>svg{transform:rotate(90deg)}
+.work-parts-list{padding:0 11px 6px;border-top:1px solid var(--stroke)}
+.work-part{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 10px;padding:6px 0;border-bottom:1px solid var(--stroke)}
+.work-part:last-child{border-bottom:0}.work-part-name{font:inherit;font-size:11px;line-height:1.7;min-width:0;overflow-wrap:anywhere}
+button.work-part-name{border:0;background:none;text-align:left;color:var(--ink);cursor:pointer;padding:6px 0}.work-part .youtube-embed-holder{grid-column:1/-1}.work-part-note{grid-column:1/-1;font-size:10px;color:var(--muted)}
+.work-scope-note,.work-recordings-label{font-size:10px;line-height:1.8;color:var(--muted);margin:10px 0}.work-scope-note{padding-left:10px;border-left:2px solid var(--green)}
 @media(max-width:1050px){.track-text:has(.local-recording){display:block}.track-text>.local-recording{margin-top:12px;max-width:380px}}
 .copy,.favorite-button,.secondary-btn,.primary-btn,.favorite-controls button{border-radius:4px}.primary-btn,html[data-theme=dark] .primary-btn{background:#294e3b;color:#fff;border-color:#294e3b}.primary-btn:hover{background:#365f48}.secondary-btn,.favorite-button{border-color:var(--stroke);color:var(--green)}.favorite-button:hover{background:var(--green-soft)}.favorite-button.is-favorite{background:var(--green-soft);border-color:var(--stroke);color:var(--green)}.favorite-controls button,html[data-theme=dark] .favorite-controls button{background:var(--paper);color:var(--muted);border-color:var(--stroke)}.favorite-controls button[aria-pressed=true],html[data-theme=dark] .favorite-controls button[aria-pressed=true]{background:#294e3b;color:#fff;border-color:#294e3b}
 dialog{border-radius:9px;box-shadow:0 28px 100px #08150e33}dialog::backdrop{background:#14291d80;backdrop-filter:blur(3px)}dialog h2{font-family:'Instrument Serif',Georgia,serif;font-size:29px;font-weight:400}.avatar-popover{border-radius:7px;box-shadow:0 14px 45px #10271b26}.profile-heading,.profile-menu-actions,.page-footer{border-color:var(--stroke)}.profile-heading .release-info{color:var(--muted)}

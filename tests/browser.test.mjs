@@ -379,6 +379,25 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await page.locator('#track-2 .version-preview').first().click();
   await expect.poll(()=>page.locator('#track-2 audio').evaluate(audio=>audio.paused)).toBe(true);
 });
+test('multi-part works show distinct selections, verified videos, searches, and scope warnings',async t=>{
+  const {page}=await app(t);
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#trackSearch').fill('138');
+  const row=page.locator('#track-138');
+  await row.locator('.work-parts summary').click();
+  await expect(row.locator('.work-part')).toHaveCount(3);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await row.locator('.work-part-name.version-preview').nth(1).click();
+  await expect(row.locator('.work-part iframe')).toHaveAttribute('src','https://www.youtube-nocookie.com/embed/5aJe5U_6aMI?start=432');
+  await row.locator('.work-parts summary').click();
+  await expect(row.locator('.work-part iframe')).toHaveCount(0);
+  await page.locator('#trackSearch').fill('39');
+  await expect(page.locator('#track-39 .work-scope-note')).toContainText('没有指定');
+  await page.locator('#track-39 .work-parts summary').click();
+  await expect(page.locator('#track-39 .part-search')).toHaveCount(4);
+  await page.locator('#trackSearch').fill('160');
+  await expect(page.locator('#track-160 .work-scope-note')).toContainText('第五乐章待核对');
+});
 test('Medieval Bilibili trial accepts a video link and collapses or switches players',async t=>{
   const {page}=await app(t);const row=page.locator('#track-1');
   await row.locator('.other-platforms > summary').click();
@@ -432,7 +451,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.5 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -459,13 +478,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.5 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.4 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.5 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

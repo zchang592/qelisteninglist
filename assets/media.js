@@ -1,6 +1,7 @@
 import { earlyRecordings } from './early-recordings.js?v=1.2.0';
 import { laterRecordings } from './later-recordings.js?v=1.5.4';
 import { icon } from './icons.js?v=3';
+import { workParts, scopeNotes } from './work-parts.js?v=1.5.5';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -137,6 +138,37 @@ export function createMediaControls(id, fullText) {
   const youtubeSearch=platformLink('搜索',`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,'youtube');
   youtubeSearch.setAttribute('aria-label',`在 YouTube 搜索第 ${id} 首作品（新标签页）`);
   header.append(platformName,youtubeSearch);contents.append(header);
+  if(scopeNotes[id]){
+    const note=document.createElement('p');note.className='work-scope-note';note.textContent=scopeNotes[id];contents.append(note);
+  }
+  if(workParts[id]){
+    const parts=document.createElement('details');parts.className='work-parts';
+    const partsSummary=document.createElement('summary');partsSummary.append(document.createTextNode('乐章 / 选曲'),icon('chevron',14));
+    const partsList=document.createElement('div');partsList.className='work-parts-list';
+    const workQuery=fullText.replace(/\s*\((?:Movements?|Nos\.|Variations?)\b[^)]*\)/gi,'');
+    for(const part of workParts[id]){
+      const item=document.createElement('div');item.className='work-part';
+      if(part.video){
+        const button=document.createElement('button');button.type='button';button.className='work-part-name version-preview';button.textContent=part.name;button.setAttribute('aria-expanded','false');
+        const link=document.createElement('a');link.className='version-open';link.target='_blank';link.rel='noopener noreferrer';link.href=`https://www.youtube.com/watch?v=${part.video}${part.start?`&t=${part.start}s`:''}`;link.textContent='打开 ↗';
+        const holder=document.createElement('div');holder.className='youtube-embed-holder';
+        button.addEventListener('click',()=>{
+          const open=button.getAttribute('aria-expanded')==='true';clearEmbeddedPlayers();
+          if(!open){pauseAudioPlayers();const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${fullText} · ${part.name} · YouTube`;frame.src=`https://www.youtube-nocookie.com/embed/${part.video}${part.start?`?start=${part.start}`:''}`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';holder.append(frame);button.setAttribute('aria-expanded','true');}
+        });
+        item.append(button,link,holder);
+        if(part.start!==undefined){const note=document.createElement('small');note.className='work-part-note';note.textContent='完整录音定位';item.append(note);}
+      }else{
+        const name=document.createElement('span');name.className='work-part-name';name.textContent=part.name;
+        const search=platformLink('搜索',`https://www.youtube.com/results?search_query=${encodeURIComponent(`${workQuery} ${part.name}`)}`,'part-search');search.setAttribute('aria-label',`在 YouTube 搜索 ${part.name}（新标签页）`);
+        item.append(name,search);
+      }
+      partsList.append(item);
+    }
+    parts.addEventListener('toggle',()=>{if(!parts.open){parts.querySelectorAll('.youtube-embed-holder').forEach(holder=>holder.replaceChildren());parts.querySelectorAll('.version-preview').forEach(button=>button.setAttribute('aria-expanded','false'));}});
+    parts.append(partsSummary,partsList);contents.append(parts);
+    const label=document.createElement('p');label.className='work-recordings-label';label.textContent='整部作品 / 其他录音';contents.append(label);
+  }
   const entries=youtubeRecordings[id] || [];
   const versionList=document.createElement('div');versionList.className='recording-slots';
   if(!entries.length){const pending=document.createElement('p');pending.className='recording-unavailable';pending.textContent='录音链接待补充，可先使用上方搜索。';versionList.append(pending);}

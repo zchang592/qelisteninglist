@@ -57,3 +57,5 @@ Release metadata: when publishing, increment the version in package.json/package
 The independent editorial entrance is `home.html`. The original site URL and `index.html` continue to open the library directly. Visual overrides are in `assets/editorial.css`; the six homepage period links use the existing library navigation through a small UI adapter. Supabase settings, persistent work IDs and backup identifiers are unchanged.
 
 The five Medieval works also include user-provided MP3 recordings in `assets/audio/medieval/`. The player loads audio on demand. Recording identification and source links match the first YouTube versions listed in `assets/media.js`.
+
+Multi-movement works and selected excerpts are catalogued in `assets/work-parts.js`; the review and unresolved scope questions are listed in `docs/multi-part-audit.md`. Per-part searches are labelled as searches, not verified recordings.
