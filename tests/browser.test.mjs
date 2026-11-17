@@ -18,7 +18,7 @@ before(async()=>{
     if(path!==root && !path.startsWith(root+sep)){res.writeHead(403).end();return;}
     try {
       const file=path===root?resolve(root,'index.html'):path;
-      const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf'}[extname(file)]||'application/octet-stream';
+      const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf','.mp3':'audio/mpeg'}[extname(file)]||'application/octet-stream';
       res.writeHead(200,{'Content-Type':mime});res.end(await readFile(file));
     } catch {res.writeHead(404).end();}
   });
@@ -356,7 +356,20 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await first.click();await expect(first).toHaveAttribute('aria-expanded','false');
   await expect(page.locator('#track-1 iframe')).toHaveCount(0);
   await expect(page.locator('a[href*="spotify"]')).toHaveCount(0);
-  await expect(page.locator('.preview-button, audio')).toHaveCount(0);
+  await expect(page.locator('.preview-button')).toHaveCount(0);
+  for(let id=1;id<=5;id++){
+    const audio=page.locator(`#track-${id} audio`);
+    await expect(audio).toHaveAttribute('preload','none');
+    await expect(audio).toHaveAttribute('src',new RegExp(`^\\./assets/audio/medieval/0${id}-.*\\.mp3$`));
+  }
+  await expect(page.locator('#track-6 audio')).toHaveCount(0);
+  const firstAudio=page.locator('#track-1 audio');
+  await firstAudio.evaluate(audio=>audio.play());
+  await expect.poll(()=>firstAudio.evaluate(audio=>audio.paused)).toBe(false);
+  await page.locator('#track-2 audio').evaluate(audio=>audio.play());
+  await expect.poll(()=>firstAudio.evaluate(audio=>audio.paused)).toBe(true);
+  await page.locator('#track-2 .version-preview').first().click();
+  await expect.poll(()=>page.locator('#track-2 audio').evaluate(audio=>audio.paused)).toBe(true);
 });
 test('Medieval Bilibili trial accepts a video link and collapses or switches players',async t=>{
   const {page}=await app(t);const row=page.locator('#track-1');
@@ -410,7 +423,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -437,13 +450,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.2 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.5.3 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
@@ -580,6 +593,8 @@ test('layout fits desktop, tablet, and 320/390 px phones; dialogs stay within th
   for(const width of [1440,1024,820,768,390,320]) {
     await page.setViewportSize({width,height:900});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow at ${width}`);
+    const player=await page.locator('#track-1 audio').boundingBox();
+    assert.ok(player && player.x>=0 && player.x+player.width<=width+1,`audio player fits at ${width}`);
     await page.getByRole('button',{name:'打开第 1 首的评论窗口',exact:true}).click();
     const rect=await page.locator('#commentsDialog').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=width+1);
     await page.locator('#closeComments').click();

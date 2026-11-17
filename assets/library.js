@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=3';
-import { createMediaControls } from './media.js?v=1.5.2';
+import { createMediaControls } from './media.js?v=1.5.3';
 
 const $=id=>document.getElementById(id);
 const normalise=value=>value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase();

@@ -79,6 +79,18 @@ function clearEmbeddedPlayers() {
   document.querySelectorAll('.bilibili-section [data-video-link]').forEach(link=>{link.hidden=true;});
 }
 
+function pauseAudioPlayers() {
+  document.querySelectorAll('.local-recording audio').forEach(audio=>audio.pause());
+}
+
+const localRecordings = {
+  1: ['01-missa-de-angelis-kyrie.mp3','Schola Gregoriana Mediolanensis'],
+  2: ['02-requiem-aeternam.mp3','Harpa Dei'],
+  3: ['03-dies-irae.mp3','Harpa Dei'],
+  4: ['04-sumer-is-icumen-in.mp3','Hilliard Ensemble'],
+  5: ['05-machaut-kyrie.mp3','Messe de Nostre Dame · Kyrie'],
+};
+
 function platformLink(name, url, logo) {
   const link = document.createElement('a');
   link.href = url;
@@ -97,6 +109,7 @@ export function createMediaControls(id, fullText) {
   versionDetails.className='recording-versions';
   versionDetails.addEventListener('toggle',()=>{
     if(!versionDetails.open){
+      versionDetails.querySelectorAll('audio').forEach(audio=>audio.pause());
       versionDetails.querySelectorAll('.youtube-embed-holder,.bilibili-embed-holder').forEach(holder=>holder.replaceChildren());
       versionDetails.querySelectorAll('.version-preview').forEach(button=>{button.setAttribute('aria-expanded','false');});
       versionDetails.querySelectorAll('.bilibili-section [data-video-link]').forEach(link=>{link.hidden=true;});
@@ -108,6 +121,16 @@ export function createMediaControls(id, fullText) {
   const summaryPlatforms=document.createElement('span');summaryPlatforms.className='recording-versions-platforms';summaryPlatforms.textContent=id<=5?'YouTube · B站 · 网易云':'YouTube · 网易云';
   summary.append(icon('headphones',15),summaryTitle,summaryPlatforms,icon('chevron',14));
   const contents=document.createElement('div');contents.className='recording-versions-content';
+  const local=localRecordings[id];
+  if(local){
+    const player=document.createElement('div');player.className='local-recording';
+    const label=document.createElement('span');label.className='recording-platform-name';label.textContent='站内音频';
+    const credit=document.createElement('span');credit.className='local-recording-credit';credit.textContent=local[1];
+    const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`./assets/audio/medieval/${local[0]}`;
+    audio.setAttribute('aria-label',`${fullText} · ${local[1]}`);
+    audio.addEventListener('play',()=>{document.querySelectorAll('.local-recording audio').forEach(other=>{if(other!==audio)other.pause();});clearEmbeddedPlayers();});
+    player.append(label,credit,audio);contents.append(player);
+  }
   const header=document.createElement('div');header.className='recording-platform-header';
   const platformName=document.createElement('span');platformName.className='recording-platform-name';
   const youtubeIcon=document.createElement('img');youtubeIcon.src='./assets/icons/youtube.svg';youtubeIcon.alt='';youtubeIcon.width=16;youtubeIcon.height=16;
@@ -134,7 +157,7 @@ export function createMediaControls(id, fullText) {
       preview.addEventListener('click',()=>{
         const open=preview.getAttribute('aria-expanded')==='true';
         clearEmbeddedPlayers();
-        if(!open){const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${entry.title || fullText} · YouTube`;
+        if(!open){pauseAudioPlayers();const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${entry.title || fullText} · YouTube`;
           frame.src=`https://www.youtube-nocookie.com/embed/${video}${entry.start ? `?start=${entry.start}` : ''}`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';
           holder.append(frame);preview.setAttribute('aria-expanded','true');}
       });
@@ -166,7 +189,7 @@ export function createMediaControls(id, fullText) {
     form.addEventListener('submit',event=>{
       event.preventDefault();const video=bilibiliVideo(input.value);
       if(!video){feedback.textContent='请输入完整的 B 站视频链接或 BV 号。';return;}
-      feedback.textContent='';clearEmbeddedPlayers();
+      feedback.textContent='';clearEmbeddedPlayers();pauseAudioPlayers();
       const frame=document.createElement('iframe');frame.className='youtube-embed';frame.title=`${fullText} · Bilibili`;
       frame.src=`https://player.bilibili.com/player.html?bvid=${video.id}&page=${video.page}&autoplay=0`;
       frame.allow='fullscreen; picture-in-picture';frame.allowFullscreen=true;frame.loading='lazy';holder.append(frame);
