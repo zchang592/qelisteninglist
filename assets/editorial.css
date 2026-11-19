@@ -25,6 +25,10 @@ body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Micro
 .track-text:has(.local-recording)>:not(.local-recording){grid-column:1}
 .track-text>.local-recording{grid-column:2;grid-row:1 / span 3;min-width:0;margin:0;padding:0;border:0}
 .local-recording audio{min-width:0}
+.local-recording.local-recording-parts{display:block}
+.local-recording-parts>summary{cursor:pointer;color:var(--ink);font-size:12px;padding:8px 0}
+.local-recording-parts>.local-recording{margin:0;padding:8px 0}
+.local-recording-parts>.local-recording:last-child{border-bottom:0}
 .other-platforms{margin-top:8px}
 .other-platform-links{display:flex;flex-wrap:wrap;gap:8px 22px}
 .other-platform-links .platform-link{font-size:11px;min-height:40px;color:var(--ink)}

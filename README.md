@@ -62,4 +62,6 @@ The independent editorial entrance is `home.html`. The original site URL and `in
 
 The player loads user-provided MP3s from `assets/audio/medieval/` and Ogg Opus files from `assets/audio/baroque/` and `assets/audio/classical/` on demand. The Baroque recordings for BWV 1047 and HWV 351 stop at the end of the first movement and overture, respectively.
 
+Renaissance audio lives in `assets/audio/renaissance/`. The larger Romantic and 20th-century collections live on the `site-audio` branch of this repository so the Pages build stays within its size limit. `assets/local-recordings.js` pins that branch's audio commit and lists named excerpts under `parts`. The library, listening room, and blind practice all use that manifest. Favorites and discussion are keyed by the original work ID.
+
 Explicitly selected excerpts are catalogued in `assets/work-parts.js`; complete works stay together. The review and unresolved scope questions are in `docs/multi-part-audit.md`. Generate the preferred YouTube lists with `node scripts/generate-first-choice.mjs`.

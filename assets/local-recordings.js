@@ -1,3 +1,5 @@
+const audioArchive = 'https://raw.githubusercontent.com/zchang592/qelisteninglist/8c8ecdc646c45795c2f312f59357883429bf680c/assets/audio';
+
 // Recordings served with the site, keyed by the work IDs shared by the library and player.
 // Set album to a key in recordingAlbums. Optional quizTitle and titleAliases describe the recorded selection.
 export const localRecordings = {
@@ -26,6 +28,14 @@ export const localRecordings = {
     credit: 'Messe de Nostre Dame · Kyrie', duration: 468.456,
     titleAliases: ['Messe de Notre Dame', 'Messe de Nostre Dame', 'Messe de Nostre Dame Kyrie', 'Notre Dame Mass', '圣母弥撒', '圣母弥撒慈悲经'],
   },
+
+  // Renaissance.
+  6: { src: "./assets/audio/renaissance/006-josquin-des-pres-missa-pange-lingua-kyrie-eleison.opus", duration: 162.887 },
+  7: { src: "./assets/audio/renaissance/007-giovanni-de-palestrina-assumpta-est-maria-6-part.opus", duration: 208.069 },
+  8: { src: "./assets/audio/renaissance/008-thomas-tallis-spem-in-alium-40-part-motet.opus", duration: 776.691 },
+  9: { src: "./assets/audio/renaissance/009-thomas-morley-now-is-the-month-of-maying.opus", duration: 124.767 },
+  10: { src: "./assets/audio/renaissance/010-john-dowland-can-she-excuse-my-wrongs.opus", duration: 275.976 },
+  11: { src: "./assets/audio/renaissance/011-16th-century-english-folksong-greensleeves.opus", duration: 157.438 },
 
   // Baroque. For the two selected movements, the Opus stream ends at the source chapter boundary.
   12: { src: "./assets/audio/baroque/012-monteverdi-orfeo-overture.opus", duration: 100.317 },
@@ -99,7 +109,147 @@ export const localRecordings = {
   78: { src: "./assets/audio/classical/078-beethoven-diabelli-variations-theme.opus", duration: 46.574 },
   79: { src: "./assets/audio/classical/079-beethoven-missa-solemnis-kyrie.opus", duration: 658.768, credit: "Kyrie eleison / Christe eleison / Kyrie eleison" },
   80: { src: "./assets/audio/classical/080-beethoven-egmont-overture.opus", duration: 575.943 },
+
+  // Romantic.
+  81: { src: `${audioArchive}/romantic/081-schubert-symphony-no-8-in-b-minor-unfinished.opus`, duration: 1617.613 },
+  82: { src: `${audioArchive}/romantic/082-schubert-string-quartet-no-14-in-d-minor-death-and-the-maiden.opus`, duration: 2136.254 },
+  83: { src: `${audioArchive}/romantic/083-schubert-piano-quintet-in-a-major-d-667-trout.opus`, duration: 2122.78 },
+  84: { src: `${audioArchive}/romantic/084-schubert-string-quintet-in-c-major-d-956.opus`, duration: 3267.368 },
+  85: { src: `${audioArchive}/romantic/085-schubert-erlkonig.opus`, duration: 270.577 },
+  86: { parts: [
+    { name: "No. 1 · Gute Nacht", src: `${audioArchive}/romantic/086-schubert-winterreise-gute-nacht-der-lindenbaum-wasserflut-no-1-gute-nacht.opus`, duration: 346.39 },
+    { name: "No. 5 · Der Lindenbaum", src: `${audioArchive}/romantic/086-schubert-winterreise-gute-nacht-der-lindenbaum-wasserflut-no-5-der-lindenbaum.opus`, duration: 291.231 },
+    { name: "No. 6 · Wasserflut", src: `${audioArchive}/romantic/086-schubert-winterreise-gute-nacht-der-lindenbaum-wasserflut-no-6-wasserflut.opus`, duration: 250.085 },
+  ] },
+  87: { src: `${audioArchive}/romantic/087-schumann-symphony-no-3-in-e-major-rhenish.opus`, duration: 2047.449 },
+  88: { src: `${audioArchive}/romantic/088-schumann-piano-quintet-in-e-major-op-44.opus`, duration: 2044.535 },
+  89: { parts: [
+    { name: "No. 1 · Im wunderschönen Monat Mai", src: `${audioArchive}/romantic/089-schumann-dichterliebe-op-48-im-wunderschonen-monat-mai-ich-gro-no-1-im-wunderschonen-monat-mai.opus`, duration: 116.965 },
+    { name: "No. 7 · Ich grolle nicht", src: `${audioArchive}/romantic/089-schumann-dichterliebe-op-48-im-wunderschonen-monat-mai-ich-gro-no-7-ich-grolle-nicht.opus`, duration: 92.619 },
+    { name: "No. 12 · Am leuchtenden Sommermorgen", src: `${audioArchive}/romantic/089-schumann-dichterliebe-op-48-im-wunderschonen-monat-mai-ich-gro-no-12-am-leuchtenden-sommermorgen.opus`, duration: 157.101 },
+  ] },
+  90: { src: `${audioArchive}/romantic/090-mendelssohn-symphony-no-4-in-a-major-italian.opus`, duration: 1897.251 },
+  91: { src: `${audioArchive}/romantic/091-mendelssohn-violin-concerto-in-e-minor.opus`, duration: 1767.324 },
+  92: { src: `${audioArchive}/romantic/092-berlioz-symphonie-fantastique.opus`, duration: 3512.953 },
+  93: { src: `${audioArchive}/romantic/093-brahms-symphony-no-1-in-c-minor.opus`, duration: 2550.983 },
+  94: { src: `${audioArchive}/romantic/094-brahms-symphony-no-4-in-e-minor.opus`, duration: 2625.127 },
+  95: { src: `${audioArchive}/romantic/095-brahms-violin-concerto-in-d-major.opus`, duration: 2552.448 },
+  96: { src: `${audioArchive}/romantic/096-brahms-string-quintet-no-2-in-g-major-op-111.opus`, duration: 1777.628 },
+  97: { src: `${audioArchive}/romantic/097-tchaikovsky-symphony-no-4-in-f-minor.opus`, duration: 2988.775 },
+  98: { src: `${audioArchive}/romantic/098-tchaikovsky-symphony-no-6-in-b-minor-pathetique.opus`, duration: 3055.416 },
+  99: { src: `${audioArchive}/romantic/099-tchaikovsky-violin-concerto-in-d-major.opus`, duration: 2491.275 },
+  100: { src: `${audioArchive}/romantic/100-tchaikovsky-piano-concerto-no-1-in-b-minor.opus`, duration: 2270.895 },
+  101: { src: `${audioArchive}/romantic/101-dvorak-symphony-no-9-in-e-minor-from-the-new-world.opus`, duration: 3052.328 },
+  102: { src: `${audioArchive}/romantic/102-dvorak-cello-concerto-in-b-minor.opus`, duration: 2496.337 },
+  103: { src: `${audioArchive}/romantic/103-dvorak-piano-quintet-no-2-in-a-major.opus`, duration: 2488.176 },
+  105: { src: `${audioArchive}/romantic/105-mahler-symphony-no-1-in-d-major-titan.opus`, duration: 3289.299 },
+  109: { src: `${audioArchive}/romantic/109-elgar-cello-concerto-in-e-minor.opus`, duration: 1787.978 },
+  110: { src: `${audioArchive}/romantic/110-rachmaninoff-piano-concerto-no-2-in-c-minor.opus`, duration: 1981.609 },
+  111: { src: `${audioArchive}/romantic/111-rachmaninoff-piano-concerto-no-3-in-d-minor.opus`, duration: 2607.12 },
+  112: { src: `${audioArchive}/romantic/112-liszt-les-preludes.opus`, duration: 1006.385 },
+  113: { src: `${audioArchive}/romantic/113-smetana-vltava-the-moldau.opus`, duration: 763.072 },
+  114: { src: `${audioArchive}/romantic/114-r-strauss-death-and-transfiguration.opus`, duration: 1651.816 },
+  115: { src: `${audioArchive}/romantic/115-r-strauss-don-juan.opus`, duration: 1221.895 },
+  116: { src: `${audioArchive}/romantic/116-schoenberg-verklarte-nacht.opus`, duration: 1860.134 },
+  117: { parts: [
+    { name: "Overture", src: `${audioArchive}/romantic/117-rossini-the-barber-of-seville-overture-una-voce-poco-fa-largo-overture.opus`, duration: 193.927 },
+    { name: "Una voce poco fa", src: `${audioArchive}/romantic/117-rossini-the-barber-of-seville-overture-una-voce-poco-fa-largo-una-voce-poco-fa.opus`, duration: 393.457 },
+    { name: "Largo al factotum", src: `${audioArchive}/romantic/117-rossini-the-barber-of-seville-overture-una-voce-poco-fa-largo-largo-al-factotum.opus`, duration: 280.689 },
+  ] },
+  118: { parts: [
+    { name: "Libiamo ne’ lieti calici", src: `${audioArchive}/romantic/118-verdi-la-traviata-libiamo-ne-lieti-calici-sempre-libera-libiamo-ne-lieti-calici.opus`, duration: 188.97 },
+    { name: "Sempre libera", src: `${audioArchive}/romantic/118-verdi-la-traviata-libiamo-ne-lieti-calici-sempre-libera-sempre-libera.opus`, duration: 495.942 },
+  ] },
+  119: { parts: [
+    { name: "Prelude", src: `${audioArchive}/romantic/119-wagner-tristan-und-isolde-prelude-liebestod-prelude.opus`, duration: 658.582 },
+    { name: "Liebestod", src: `${audioArchive}/romantic/119-wagner-tristan-und-isolde-prelude-liebestod-liebestod.opus`, duration: 463.697 },
+  ] },
+  120: { parts: [
+    { name: "Là, sui monti dell’Est", src: `${audioArchive}/romantic/120-puccini-turandot-la-sui-monti-dell-est-nessun-dorma-la-sui-monti-dellest.opus`, duration: 79.988 },
+    { name: "Nessun dorma", src: `${audioArchive}/romantic/120-puccini-turandot-la-sui-monti-dell-est-nessun-dorma-nessun-dorma.opus`, duration: 195.24 },
+  ] },
+
+
+  // 20th century.
+  121: { src: `${audioArchive}/20th-century/121-debussy-l-apres-midi-d-un-faune-prelude.opus`, duration: 705.649 },
+  122: { src: `${audioArchive}/20th-century/122-debussy-la-mer-trois-esquisses-symphoniques.opus`, duration: 1643.376 },
+  123: { src: `${audioArchive}/20th-century/123-debussy-images-book-2-for-piano.opus`, duration: 825.372 },
+  124: { src: `${audioArchive}/20th-century/124-scriabin-piano-sonata-no-5-op-53.opus`, duration: 683.579 },
+  125: { src: `${audioArchive}/20th-century/125-ravel-la-valse-m-72.opus`, duration: 989.188 },
+  126: { src: `${audioArchive}/20th-century/126-ravel-daphnis-et-chloe-second-suite.opus`, duration: 943.561 },
+  127: { src: `${audioArchive}/20th-century/127-sibelius-symphony-no-7-in-c-major-op-105.opus`, duration: 1510.198 },
+  128: { src: `${audioArchive}/20th-century/128-falla-el-amor-brujo-the-bewitched-love-h-123.opus`, duration: 1496.022 },
+  129: { src: `${audioArchive}/20th-century/129-stravinsky-the-rite-of-spring-le-sacre-du-printemps.opus`, duration: 2404.816 },
+  130: { src: `${audioArchive}/20th-century/130-stravinsky-symphony-of-psalms-s-150.opus`, duration: 1276.593 },
+  131: { src: `${audioArchive}/20th-century/131-janacek-sinfonietta.opus`, duration: 1438.819 },
+  132: { src: `${audioArchive}/20th-century/132-prokofiev-symphony-no-1-in-d-major-op-25-classical.opus`, duration: 845.828 },
+  133: { src: `${audioArchive}/20th-century/133-prokofiev-romeo-and-juliet-op-64-first-suite.opus`, duration: 1730.288 },
+  134: { src: `${audioArchive}/20th-century/134-poulenc-concerto-for-two-pianos-and-orchestra-in-d-minor-fp-61.opus`, duration: 1258.307 },
+  135: { src: `${audioArchive}/20th-century/135-honegger-pacific-231.opus`, duration: 425.895 },
+  136: { src: `${audioArchive}/20th-century/136-bartok-concerto-for-orchestra-sz-116-bb-123.opus`, duration: 2576.075 },
+  137: { parts: [
+    { name: "IV · The Night’s Music", src: `${audioArchive}/20th-century/137-bartok-out-of-doors-sz-81-bb-89-iv-the-nights-music.opus`, duration: 420.334 },
+    { name: "V · The Chase", src: `${audioArchive}/20th-century/137-bartok-out-of-doors-sz-81-bb-89-v-the-chase.opus`, duration: 175.689 },
+  ] },
+  138: { parts: [
+    { name: "I · Allegro", src: `${audioArchive}/20th-century/138-bartok-string-quartet-no-4-sz-91-bb-95-i-allegro.opus`, duration: 432.02 },
+    { name: "II · Prestissimo, con sordino", src: `${audioArchive}/20th-century/138-bartok-string-quartet-no-4-sz-91-bb-95-ii-prestissimo-con-sordino.opus`, duration: 182.02 },
+    { name: "V · Allegro molto", src: `${audioArchive}/20th-century/138-bartok-string-quartet-no-4-sz-91-bb-95-v-allegro-molto.opus`, duration: 402.092 },
+  ] },
+  139: { src: `${audioArchive}/20th-century/139-schoenberg-pierrot-lunaire-op-21.opus`, duration: 2168.135 },
+  140: { src: `${audioArchive}/20th-century/140-berg-wozzeck-act-iii.opus`, duration: 1867.334 },
+  142: { src: `${audioArchive}/20th-century/142-webern-6-pieces-for-large-orchestra-op-6.opus`, duration: 738.018 },
+  143: { src: `${audioArchive}/20th-century/143-ives-the-unanswered-question-s-105.opus`, duration: 346.007 },
+  144: { parts: [
+    { name: "I · Moderato", src: `${audioArchive}/20th-century/144-shostakovich-symphony-no-10-in-e-minor-op-93-i-moderato.opus`, duration: 1355.006 },
+    { name: "II · Allegro", src: `${audioArchive}/20th-century/144-shostakovich-symphony-no-10-in-e-minor-op-93-ii-allegro.opus`, duration: 283.65 },
+  ] },
+  145: { src: `${audioArchive}/20th-century/145-shostakovich-string-quartet-no-8-in-c-minor-op-110.opus`, duration: 1315.231 },
+  146: { src: `${audioArchive}/20th-century/146-messiaen-quartet-for-the-end-of-time-quatuor-pour-la-fin-du-te.opus`, duration: 2593.052 },
+  147: { parts: [
+    { name: "II · Chant d’amour I", src: `${audioArchive}/20th-century/147-messiaen-turangalila-symphonie-ii-chant-damour-i.opus`, duration: 493.673 },
+    { name: "V · Joie du sang des étoiles", src: `${audioArchive}/20th-century/147-messiaen-turangalila-symphonie-v-joie-du-sang-des-etoiles.opus`, duration: 376.019 },
+    { name: "VI · Jardin du sommeil d’amour", src: `${audioArchive}/20th-century/147-messiaen-turangalila-symphonie-vi-jardin-du-sommeil-damour.opus`, duration: 764.616 },
+  ] },
+  148: { parts: [
+    { name: "I · Avant ‘L’Artisanat furieux’", src: `${audioArchive}/20th-century/148-boulez-le-marteau-sans-maitre-the-hammer-without-a-master-i-avant-lartisanat-furieux.opus`, duration: 114.927 },
+    { name: "VIII · Commentaire III de ‘Bourreaux de solitude’", src: `${audioArchive}/20th-century/148-boulez-le-marteau-sans-maitre-the-hammer-without-a-master-viii-commentaire-iii-de-bourreaux-de-solitude.opus`, duration: 385.007 },
+  ] },
+  149: { parts: [
+    { name: "No. 1 · Désordre", src: `${audioArchive}/20th-century/149-ligeti-piano-etudes-book-1-nos-i-iv-v-vi-no-1-desordre.opus`, duration: 173.611 },
+    { name: "No. 4 · Fanfares", src: `${audioArchive}/20th-century/149-ligeti-piano-etudes-book-1-nos-i-iv-v-vi-no-4-fanfares.opus`, duration: 226.97 },
+    { name: "No. 5 · Arc-en-ciel", src: `${audioArchive}/20th-century/149-ligeti-piano-etudes-book-1-nos-i-iv-v-vi-no-5-arc-en-ciel.opus`, duration: 213.491 },
+    { name: "No. 6 · Automne à Varsovie", src: `${audioArchive}/20th-century/149-ligeti-piano-etudes-book-1-nos-i-iv-v-vi-no-6-automne-a-varsovie.opus`, duration: 315.357 },
+  ] },
+  150: { src: `${audioArchive}/20th-century/150-ligeti-atmospheres-for-orchestra.opus`, duration: 536.434 },
+  151: { src: `${audioArchive}/20th-century/151-john-adams-nixon-in-china-act-i.opus`, duration: 3766.411 },
+  152: { src: `${audioArchive}/20th-century/152-crumb-voices-of-ancient-children-for-mezzo-soprano-and-percuss.opus`, duration: 1805.34 },
+  153: { parts: [
+    { name: "I · Allegro energico", src: `${audioArchive}/20th-century/153-barber-piano-sonata-in-e-flat-minor-op-26-i-allegro-energico.opus`, duration: 433.54 },
+    { name: "IV · Fuga", src: `${audioArchive}/20th-century/153-barber-piano-sonata-in-e-flat-minor-op-26-iv-fuga.opus`, duration: 286.622 },
+  ] },
+  154: { src: `${audioArchive}/20th-century/154-cage-sonatas-and-interludes-for-prepared-piano.opus`, duration: 3180.943 },
+  155: { src: `${audioArchive}/20th-century/155-reich-piano-phase-for-two-pianos-or-two-tape-recorders.opus`, duration: 1236.7 },
+  156: { src: `${audioArchive}/20th-century/156-dutilleux-violin-concerto-l-arbre-des-songes-the-tree-of-dream.opus`, duration: 1514.331 },
+  157: { src: `${audioArchive}/20th-century/157-penderecki-threnody-to-the-victims-of-hiroshima-for-52-string.opus`, duration: 518.566 },
+  158: { parts: [
+    { name: "Variation 1", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-1.opus`, duration: 52.007 },
+    { name: "Variation 2", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-2.opus`, duration: 51.873 },
+    { name: "Variation 3", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-3.opus`, duration: 65.9 },
+    { name: "Variation 4", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-4.opus`, duration: 56.38 },
+    { name: "Variation 5", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-5.opus`, duration: 68.1 },
+    { name: "Variation 6", src: `${audioArchive}/20th-century/158-rzewski-the-people-united-will-never-be-defeated-variations-16-variation-6.opus`, duration: 68.847 },
+  ] },
+  159: { src: `${audioArchive}/20th-century/159-takemitsu-november-steps.opus`, duration: 1148.709 },
+  160: { parts: [
+    { name: "I · Movement I", src: `${audioArchive}/20th-century/160-lutosawski-venetian-games-op-11-i-movement-i.opus`, duration: 197.006 },
+  ] },
 };
 
 // Add sourced album information here using { title, artist, year?, artwork? }.
 export const recordingAlbums = {};
+
+export function recordingsForWork(id) {
+  const work = localRecordings[id];
+  return work?.parts ?? (work?.src ? [work] : []);
+}

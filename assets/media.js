@@ -2,7 +2,7 @@ import { earlyRecordings } from './early-recordings.js?v=1.5.7';
 import { laterRecordings } from './later-recordings.js?v=1.5.7';
 import { icon } from './icons.js?v=3';
 import { workParts, scopeNotes } from './work-parts.js?v=1.5.7';
-import { localRecordings } from './local-recordings.js?v=1.6.1';
+import { recordingsForWork } from './local-recordings.js?v=1.6.2';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -85,6 +85,28 @@ function pauseAudioPlayers() {
   document.querySelectorAll('.local-recording audio').forEach(audio=>audio.pause());
 }
 
+function recordingPlayer(recording, fullText) {
+  const player = document.createElement('div');
+  player.className = 'local-recording';
+  const label = document.createElement('span');
+  label.className = 'recording-platform-name';
+  label.textContent = recording.name || '站内音频';
+  const credit = document.createElement('span');
+  credit.className = 'local-recording-credit';
+  credit.textContent = recording.credit || '';
+  const audio = document.createElement('audio');
+  audio.controls = true;
+  audio.preload = 'none';
+  audio.src = recording.src;
+  audio.setAttribute('aria-label', [fullText, recording.name, recording.credit].filter(Boolean).join(' · '));
+  audio.addEventListener('play', () => {
+    document.querySelectorAll('.local-recording audio').forEach(other => { if (other !== audio) other.pause(); });
+    clearEmbeddedPlayers();
+  });
+  player.append(label, credit, audio);
+  return player;
+}
+
 function platformLink(name, url, logo) {
   const link = document.createElement('a');
   link.href = url;
@@ -113,15 +135,16 @@ export function createMediaControls(id, fullText) {
   const summaryTitle=document.createElement('span');summaryTitle.className='recording-versions-title';summaryTitle.textContent='YouTube 录音版本';
   summary.append(icon('headphones',15),summaryTitle,icon('chevron',14));
   const contents=document.createElement('div');contents.className='recording-versions-content';
-  const local=localRecordings[id];
-  if(local){
-    const player=document.createElement('div');player.className='local-recording';
-    const label=document.createElement('span');label.className='recording-platform-name';label.textContent='站内音频';
-    const credit=document.createElement('span');credit.className='local-recording-credit';credit.textContent=local.credit || '';
-    const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=local.src;
-    audio.setAttribute('aria-label',[fullText,local.credit].filter(Boolean).join(' · '));
-    audio.addEventListener('play',()=>{document.querySelectorAll('.local-recording audio').forEach(other=>{if(other!==audio)other.pause();});clearEmbeddedPlayers();});
-    player.append(label,credit,audio);block.append(player);
+  const sources = recordingsForWork(id);
+  if (sources.length === 1) block.append(recordingPlayer(sources[0], fullText));
+  if (sources.length > 1) {
+    const playlist = document.createElement('details');
+    playlist.className = 'local-recording local-recording-parts';
+    playlist.open = true;
+    const heading = document.createElement('summary');
+    heading.textContent = `站内音频 · ${sources.length} 段`;
+    playlist.append(heading, ...sources.map(recording => recordingPlayer(recording, fullText)));
+    block.append(playlist);
   }
   const header=document.createElement('div');header.className='recording-platform-header';
   const platformName=document.createElement('span');platformName.className='recording-platform-name';

@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=4';
-import { localRecordings, recordingAlbums } from './local-recordings.js?v=1.6.1';
+import { recordingsForWork, recordingAlbums } from './local-recordings.js?v=1.6.2';
 import { createVisualizer } from './player-visualizer.js?v=1.6.0';
 
 function normalize(text) {
@@ -24,6 +24,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
   const $ = id => document.getElementById(id);
   const root = $('playerView');
   const audio = $('playerAudio');
+  audio.crossOrigin = 'anonymous';
   const trackList = $('playerTracks');
   const search = $('playerSearch');
   const group = $('playerGroup');
@@ -37,12 +38,15 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     const firstChinese = name.search(/[\u3400-\u9fff]/);
     return [name.slice(0, firstChinese).trim(), name.slice(firstChinese)];
   });
-  const tracks = data.flatMap(([period, composers], periodIndex) => composers.flatMap(([composer, works]) => works.map(([id, fullText]) => ({
-    id, composer, periodIndex,
-    title: fullText.split(' — ').slice(1).join(' — ') || fullText,
-    searchable: normalize(`${period} ${composer} ${fullText}`),
-    recording: localRecordings[id],
-  }))));
+  const tracks = data.flatMap(([period, composers], periodIndex) => composers.flatMap(([composer, works]) => works.flatMap(([id, fullText]) => {
+    const recordings = recordingsForWork(id);
+    const workTitle = fullText.split(' — ').slice(1).join(' — ') || fullText;
+    return (recordings.length ? recordings : [undefined]).map(recording => ({
+      id, composer, periodIndex, recording,
+      title: [workTitle, recording?.name].filter(Boolean).join(' · '),
+      searchable: normalize(`${period} ${composer} ${fullText} ${recording?.name || ''}`),
+    }));
+  })));
   const onSite = tracks.filter(track => track.recording);
   const composers = [...new Set(tracks.map(track => track.composer))].sort((a, b) => a.localeCompare(b, 'en'));
   const visualizer = createVisualizer($('playerWaveform'), audio);
@@ -94,7 +98,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
       if (!id) continue;
       const saved = favorites.has(id);
       const name = saved ? tr('取消收藏', 'Remove favorite') : tr('收藏', 'Favorite');
-      const title = button === $('playerFavorite') ? current.title : trackRows.get(id).track.title;
+      const title = button === $('playerFavorite') ? current.title : trackRows.get(button.closest('.player-row')).track.title;
       label(button, `${name} ${title}`);
       button.setAttribute('aria-pressed', String(saved));
       button.disabled = favorites.pending(id);
@@ -150,7 +154,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     discuss.setAttribute('aria-haspopup', 'dialog');
     actions.append(favorite, discuss);
     row.append(action, actions);
-    trackRows.set(track.id, { track, row, action, symbol });
+    trackRows.set(row, { track, row, action, symbol });
     return row;
   }
 
@@ -192,7 +196,8 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     const visibleTracks = groups.flatMap(([, list]) => list);
     selection = visibleTracks.filter(track => track.recording);
     playSelection.disabled = !selection.length;
-    $('playerResults').textContent = tr(`${visibleTracks.length} 首作品 · ${selection.length} 首可播放`, `${visibleTracks.length} works · ${selection.length} playable`);
+    const workCount = new Set(visibleTracks.map(track => track.id)).size;
+    $('playerResults').textContent = tr(`${workCount} 首作品 · ${selection.length} 段可播放`, `${workCount} works · ${selection.length} playable`);
     if (view === 'favorites') {
       favoriteViewSignature = favoriteSignature();
       const { signedIn, loading, ready, error, count } = favorites.snapshot();
@@ -223,7 +228,8 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
       title.textContent = heading;
       const count = document.createElement('span');
       count.className = 'player-group-count';
-      count.textContent = tr(`${items.length} 首`, `${items.length} ${items.length === 1 ? 'work' : 'works'}`);
+      const works = new Set(items.map(track => track.id)).size;
+      count.textContent = tr(`${works} 首`, `${works} ${works === 1 ? 'work' : 'works'}`);
       summary.append(title, count, icon('chevron', 16));
       card.append(summary, list);
       card.addEventListener('toggle', () => {

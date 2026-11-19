@@ -1,5 +1,5 @@
 import { data } from './data.js';
-import { localRecordings } from './local-recordings.js?v=1.6.1';
+import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.2';
 import { icon, mountIcons } from './icons.js?v=4';
 import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
 
@@ -56,7 +56,7 @@ const catalogue = data.flatMap(([, composers], period) => composers.flatMap(([co
     titles: [title, withoutParentheses(title), ...(recording?.titleAliases || [])],
   };
 })));
-const pool = catalogue.filter(track => track.recording?.src);
+const pool = catalogue.flatMap(track => recordingsForWork(track.id).map(recording => ({ ...track, recording })));
 const creators = [...new Set(catalogue.map(track => track.composer))];
 const scopePeriods = [];
 let current;
@@ -128,7 +128,7 @@ function checkText() {
     const others = catalogue.filter(track => creatorKey(track.composer) !== creatorKey(current.composer));
     return gradeAnswer(textAnswer.value, { answers: composerAnswers(current), otherAnswers: others.flatMap(composerAnswers) });
   }
-  const others = catalogue.filter(track => track !== current);
+  const others = catalogue.filter(track => track.id !== current.id);
   const partial = [];
   if (current.section && others.some(track => track.parent === current.parent)) {
     partial.push(current.parent, withoutParentheses(current.parent));
@@ -174,7 +174,7 @@ function buildScope() {
     const choices = new Map();
     let count = 0;
     for (const [composer, works] of composers) {
-      const choice = scopeChoice(composer, works.filter(([id]) => localRecordings[id]?.src).length);
+      const choice = scopeChoice(composer, works.reduce((total, [id]) => total + recordingsForWork(id).length, 0));
       count += choice.count;
       choices.set(composer, choice);
       list.append(choice.label);
@@ -256,8 +256,9 @@ function renderFeedback() {
   }[result.reason] || '';
   const solution = mode === 'period' ? periods[current.period][language] : mode === 'composer' ? composerName(current.composer) : current.title;
   $('quizSolution').textContent = tr(`正确答案 · ${solution}`, `Correct answer · ${solution}`);
-  $('quizWork').hidden = mode === 'title';
-  $('quizWork').textContent = mode === 'title' ? '' : current.work;
+  const work = mode === 'title' ? '' : current.work;
+  $('quizWork').textContent = [work, current.recording.name].filter(Boolean).join(' · ');
+  $('quizWork').hidden = !$('quizWork').textContent;
 }
 
 function renderQuestion() {

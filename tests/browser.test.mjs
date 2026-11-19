@@ -6,10 +6,15 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
 import {chromium,expect} from 'playwright/test';
-import {localRecordings} from '../assets/local-recordings.js';
+import {recordingsForWork} from '../assets/local-recordings.js';
+import {data} from '../assets/data.js';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const recordingCount=Object.values(localRecordings).filter(recording=>recording.src).length;
+const releaseVersion=JSON.parse(await readFile(resolve(root,'package.json'),'utf8')).version;
+const workIds=data.flatMap(([,composers])=>composers.flatMap(([,works])=>works.map(([id])=>id)));
+const recordingCount=workIds.reduce((total,id)=>total+recordingsForWork(id).length,0);
+const playerRowCount=workIds.reduce((total,id)=>total+Math.max(1,recordingsForWork(id).length),0);
+const firstExternalWork=workIds.find(id=>!recordingsForWork(id).length);
 const SUPABASE='skneweesbyybsuggsvyw.supabase.co';
 const USER={id:'11111111-1111-4111-8111-111111111111',user_metadata:{display_name:'Test listener'}};
 const session={access_token:'test-access-token',refresh_token:'test-refresh-token',expires_in:3600,user:USER};
@@ -375,7 +380,7 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
     await expect(audio).toHaveAttribute('preload','none');
     await expect(audio).toHaveAttribute('src',new RegExp(`^\\./assets/audio/medieval/0${id}-.*\\.mp3$`));
   }
-  await expect(page.locator('#track-6 audio')).toHaveCount(0);
+  await expect(page.locator('#track-6 audio')).toHaveAttribute('src', /006-.*\.opus$/);
   const firstAudio=page.locator('#track-1 audio');
   await expect(firstAudio).toBeVisible();
   await page.locator('#track-1 .recording-versions:not(.other-platforms) > summary').click();
@@ -401,7 +406,8 @@ test('the listening room browses the full catalogue and plays only available aud
   const {page} = await app(t);
   await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
   await expect(page.locator('#playerView')).toBeVisible();
-  await expect(page.locator('.player-row')).toHaveCount(160);
+  await expect(page.locator('.player-row')).toHaveCount(playerRowCount);
+  await expect(page.locator('#playerResults')).toContainText('160 首作品');
   await expect(page.locator('#playerAudio')).not.toHaveAttribute('src', /.+/);
   await expect(page.locator('#playerAlbum')).toBeHidden();
   await page.getByRole('button', {name:'按时期', exact:true}).click();
@@ -425,12 +431,13 @@ test('the listening room browses the full catalogue and plays only available aud
   await page.locator('.player-row[data-work="43"] .player-row-title').click();
   await expect(page.locator('#playerAudio')).toHaveAttribute('src', /043-stamitz-viola-concerto-op1-1-i\.opus$/);
   await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
-  await page.locator('#playerGroup').selectOption('1');
-  await expect(page.locator('#playSelection')).toBeDisabled();
-  await page.locator('.player-row[data-work="6"] .player-external').click();
-  await expect(page.locator('.track:visible')).toHaveCount(1);
-  await expect(page.locator('#track-6')).toBeVisible();
-  await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
+  if (firstExternalWork) {
+    await page.getByRole('button', {name:'全部曲目', exact:true}).click();
+    await page.locator(`.player-row[data-work="${firstExternalWork}"] .player-external`).click();
+    await expect(page.locator('.track:visible')).toHaveCount(1);
+    await expect(page.locator(`#track-${firstExternalWork}`)).toBeVisible();
+    await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
+  }
   await page.getByRole('button', {name:'按作曲家', exact:true}).click();
   await expect(groups.first()).toHaveAttribute('open', '');
   await expect(page.locator('.player-group[open]')).toHaveCount(1);
@@ -563,7 +570,7 @@ test('blind period practice plays one recording and reveals its title only after
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   const source = await readFile(resolve(root, 'assets/local-recordings.js'), 'utf8');
   await context.route('**/assets/local-recordings.js?*', route => route.fulfill({
-    contentType:'text/javascript', body:source+'\nlocalRecordings[6] = {src:localRecordings[1].src};',
+    contentType:'text/javascript', body:source+'\nlocalRecordings[1] = {parts:[localRecordings[1], {src:localRecordings[2].src, name:"Added recording"}]};',
   }));
   await page.reload();
   await expect(page.locator('#quizPoolCount')).toContainText(`${recordingCount+1} on-site recordings`);
@@ -623,7 +630,7 @@ test('blind practice mixes composers across periods and draws only from the sele
   await expect(start).toBeDisabled();
   const renaissance = period(1).getByRole('checkbox', {name:'文艺复兴', exact:true});
   await renaissance.check();
-  await expect(start).toBeDisabled();
+  await expect(page.locator('#quizScopeStatus')).toContainText('6 段');
   await renaissance.uncheck();
   await medieval.check();
   await expect(chant).toBeChecked();
@@ -668,6 +675,46 @@ test('blind practice mixes composers across periods and draws only from the sele
   await expect(page.locator('#quizScopeStatus')).toContainText('3 段');
   await page.locator('#quizScopeAll').click();
   await expect(page.locator('#quizScopeStatus')).toContainText(`${recordingCount} 段`);
+});
+
+test('separately uploaded excerpts play on their own and enter the blind pool', async t => {
+  const {page,context} = await app(t);
+  await context.addInitScript(() => { Math.random = () => .9999; });
+  await context.route(/\/117-[^/]+\.opus$/, route => route.fulfill({
+    contentType:'audio/wav', body:wav(), headers:{'access-control-allow-origin':'*'},
+  }));
+  const parts = recordingsForWork(117);
+  assert.equal(parts.length, 3);
+  await page.goto(`${origin}/index.html?track=117`);
+  const players = page.locator('#track-117 .local-recording-parts audio');
+  await expect(players).toHaveCount(3);
+  await players.first().evaluate(audio => audio.play());
+  await players.nth(1).evaluate(audio => audio.play());
+  await expect.poll(() => players.first().evaluate(audio => audio.paused)).toBe(true);
+
+  await page.goto(`${origin}/index.html?view=player`);
+  await page.locator('#playerSearch').fill('117');
+  const rows = page.locator('.player-row[data-work="117"]');
+  await expect(rows).toHaveCount(3);
+  await expect(page.locator('#playerResults')).toContainText('1 首作品');
+  await rows.nth(1).locator('.player-row-title').click();
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', parts[1].src);
+  await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
+
+  await page.goto(`${origin}/quiz.html`);
+  await page.locator('#quizScopeClear').click();
+  await page.getByRole('button', {name:'展开浪漫主义作曲家'}).click();
+  await page.getByRole('checkbox', {name:'Rossini', exact:true}).check();
+  await expect(page.locator('#quizScopeStatus')).toContainText('3 段');
+  await page.locator('#quizStart').click();
+  for (const part of parts) {
+    await expect(page.locator('#quizAudio')).toHaveAttribute('src', part.src);
+    await expect(page.locator('#quizWork')).toHaveText('');
+    await page.getByRole('radio', {name:'浪漫主义', exact:true}).check();
+    await page.locator('#quizSubmit').click();
+    await expect(page.locator('#quizWork')).toContainText(part.name);
+    await page.locator('#quizNext').click();
+  }
 });
 
 test('multi-part works show distinct selections, verified videos, searches, and scope warnings',async t=>{
@@ -749,7 +796,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText(`v${releaseVersion} · 更新于`);
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -776,13 +823,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText(`v${releaseVersion} · 更新于`);
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
+  await expect(page.locator('.release-info')).toContainText(`v${releaseVersion} · 更新于`);
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
