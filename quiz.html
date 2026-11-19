@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-type="software">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="QE Listening List 盲听测试。练习辨认音乐时期、作曲家和作品。">
+  <title>QE Listening List · 盲听测试</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/style.css?v=1.5.7">
+  <link rel="stylesheet" href="./assets/editorial.css?v=1.5.7">
+  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.0">
+  <script type="module" src="./assets/quiz.js?v=1.6.0"></script>
+</head>
+<body class="quiz-page">
+  <a class="skip-link" href="#quizMain" data-zh="跳到练习" data-en="Skip to practice">跳到练习</a>
+  <header class="quiz-header">
+    <a class="quiz-brand" href="./home.html"><span class="qe-seal" aria-hidden="true">Q<span>E</span></span><span>QE Listening List</span></a>
+    <nav aria-label="QE Listening List">
+      <a class="quiz-button" href="./index.html?view=player" data-zh="聆听室" data-en="Listening room">聆听室</a>
+      <button class="quiz-button quiz-icon" type="button" id="quizLanguage" aria-label="Switch language">EN</button>
+      <button class="quiz-button quiz-icon" type="button" id="quizTheme" aria-label="切换深浅色模式">☾</button>
+    </nav>
+  </header>
+  <main id="quizMain" tabindex="-1">
+    <section id="quizSetup" aria-labelledby="quizTitle">
+      <header class="quiz-intro">
+        <h1 id="quizTitle" data-zh="盲听测试" data-en="Blind listening">盲听测试</h1>
+        <p id="quizPoolCount"></p>
+      </header>
+      <form class="quiz-card quiz-setup" id="quizSetupForm">
+        <fieldset>
+          <legend data-zh="识别对象" data-en="What to identify">识别对象</legend>
+          <div class="quiz-modes">
+            <label class="quiz-option"><input type="radio" name="mode" value="period" checked><span data-zh="时期" data-en="Period">时期</span></label>
+            <label class="quiz-option"><input type="radio" name="mode" value="composer"><span data-zh="作曲家" data-en="Composer">作曲家</span></label>
+            <label class="quiz-option"><input type="radio" name="mode" value="title"><span data-zh="作品标题" data-en="Work title">作品标题</span></label>
+          </div>
+        </fieldset>
+        <fieldset id="quizDifficulty" hidden>
+          <legend data-zh="答题方式" data-en="Answer format">答题方式</legend>
+          <div class="quiz-difficulties">
+            <label class="quiz-option"><input type="radio" name="difficulty" value="easy" checked><span data-zh="简易 · 四选一" data-en="Easy · Multiple choice">简易 · 四选一</span></label>
+            <label class="quiz-option"><input type="radio" name="difficulty" value="hard"><span data-zh="困难 · 输入答案" data-en="Hard · Type the answer">困难 · 输入答案</span></label>
+          </div>
+        </fieldset>
+        <p class="quiz-hint" id="quizThresholds" hidden data-zh="文字答案的相似度达到 80% 判为正确，60% 至 79% 判为不够准确。选段或作品编号有误时会单独提示。" data-en="Text answers need 80% similarity to pass. Scores from 60% to 79% are marked close. Incorrect selections or catalogue numbers are flagged separately.">文字答案的相似度达到 80% 判为正确，60% 至 79% 判为不够准确。选段或作品编号有误时会单独提示。</p>
+        <button type="submit" class="quiz-button quiz-primary" id="quizStart"><span data-zh="开始练习" data-en="Start practice">开始练习</span><span data-icon="arrow"></span></button>
+      </form>
+    </section>
+
+    <section id="quizRound" aria-label="盲听题目" hidden>
+      <div class="quiz-round-top">
+        <span id="quizQuestionNumber"></span>
+        <button type="button" class="quiz-button" id="quizSettings" data-zh="测试设置" data-en="Practice settings">测试设置</button>
+      </div>
+      <div class="quiz-card quiz-round-card">
+        <div class="quiz-audio">
+          <audio id="quizAudio" controls preload="none" controlslist="nodownload noremoteplayback" disableremoteplayback aria-label="盲听片段"></audio>
+          <div id="quizAudioError" class="quiz-audio-error" hidden><p role="status" data-zh="这段音频暂时无法播放。" data-en="This recording could not be played.">这段音频暂时无法播放。</p><button type="button" class="quiz-button" id="quizReplace" data-zh="换一题" data-en="Try another question">换一题</button></div>
+        </div>
+        <form id="quizAnswerForm" class="quiz-answer-form">
+          <fieldset>
+            <legend id="quizPrompt" tabindex="-1"></legend>
+            <div id="quizOptions" class="quiz-options"></div>
+            <input class="quiz-text-answer" id="quizText" type="text" maxlength="160" autocomplete="off" autocapitalize="none" spellcheck="false" aria-labelledby="quizPrompt" hidden>
+          </fieldset>
+          <button type="submit" class="quiz-button quiz-primary" id="quizSubmit" data-zh="提交答案" data-en="Check answer">提交答案</button>
+        </form>
+        <section class="quiz-feedback" id="quizFeedback" aria-live="polite" tabindex="-1" hidden>
+          <div class="quiz-verdict-line"><strong id="quizVerdict"></strong><span id="quizSimilarity" hidden></span></div>
+          <p id="quizReason" hidden></p>
+          <p id="quizSolution"></p>
+          <p id="quizWork" hidden></p>
+          <button type="button" class="quiz-button quiz-primary" id="quizNext" data-zh="下一题" data-en="Next question">下一题</button>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

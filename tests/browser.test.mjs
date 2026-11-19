@@ -19,7 +19,18 @@ before(async()=>{
     try {
       const file=path===root?resolve(root,'index.html'):path;
       const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf','.mp3':'audio/mpeg'}[extname(file)]||'application/octet-stream';
-      res.writeHead(200,{'Content-Type':mime});res.end(await readFile(file));
+      const bytes=await readFile(file);
+      const headers={'Content-Type':mime,'Content-Length':bytes.length};
+      const range=mime==='audio/mpeg' && /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+      if(range) {
+        const start=Number(range[1]);
+        const end=range[2] ? Math.min(Number(range[2]),bytes.length-1) : bytes.length-1;
+        if(start>end){res.writeHead(416,{'Content-Range':`bytes */${bytes.length}`}).end();return;}
+        res.writeHead(206,{...headers,'Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${bytes.length}`,'Content-Length':end-start+1});
+        res.end(bytes.subarray(start,end+1));
+      } else {
+        res.writeHead(200,headers).end(bytes);
+      }
     } catch {res.writeHead(404).end();}
   });
   await new Promise(done=>server.listen(0,'127.0.0.1',done));
@@ -379,6 +390,189 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await page.locator('#track-2 .version-preview').first().click();
   await expect.poll(()=>page.locator('#track-2 audio').evaluate(audio=>audio.paused)).toBe(true);
 });
+test('the listening room browses the full catalogue and plays only available audio', async t => {
+  const {page} = await app(t);
+  await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
+  await expect(page.locator('#playerView')).toBeVisible();
+  await expect(page.locator('.player-row')).toHaveCount(160);
+  await expect(page.locator('#playerAudio')).not.toHaveAttribute('src', /.+/);
+  await expect(page.locator('#playerAlbum')).toBeHidden();
+  await page.getByRole('button', {name:'按时期', exact:true}).click();
+  await expect(page.locator('.player-group-title')).toHaveCount(6);
+  await page.locator('#playerGroup').selectOption('2');
+  await expect(page.locator('.player-row')).toHaveCount(29);
+  await expect(page.locator('#playSelection')).toBeDisabled();
+  await page.locator('.player-row[data-work="12"] .player-external').click();
+  await expect(page.locator('.track:visible')).toHaveCount(1);
+  await expect(page.locator('#track-12')).toBeVisible();
+  await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
+  await page.getByRole('button', {name:'按作曲家', exact:true}).click();
+  await page.locator('#playerGroup').selectOption('Guillaume de Machaut');
+  await expect(page.locator('.player-row')).toHaveCount(1);
+  await page.locator('#playSelection').click();
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await expect(page.locator('#playerSeek')).toBeEnabled();
+  await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
+  await page.locator('#playerPlay').click();
+  await expect(page.locator('#playerPlay')).toHaveAttribute('aria-label', '播放');
+  await page.getByRole('button', {name:'全部曲目', exact:true}).click();
+  await page.locator('#playerAudioOnly').check();
+  await expect(page.locator('.player-row')).toHaveCount(5);
+});
+
+test('the listening room advances, loops and shuffles the playable queue', async t => {
+  const {page} = await app(t);
+  await page.goto(`${origin}/index.html?view=player`);
+  const audio = page.locator('#playerAudio');
+  const repeat = page.locator('#playerRepeat');
+  await page.locator('#playSelection').click();
+  await expect(page.locator('#playerSeek')).toBeEnabled();
+  await repeat.click();
+  await expect(repeat).toHaveAttribute('aria-label', '列表循环');
+  await page.locator('#playerShowQueue').click();
+  await expect(page.locator('#playerQueueList button')).toHaveCount(5);
+  await page.locator('#playerQueueList button').last().click();
+  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await expect.poll(() => audio.evaluate(element => Number.isFinite(element.duration) && !element.paused)).toBe(true);
+  await audio.evaluate(element => { element.currentTime = element.duration - .12; });
+  await expect(audio).toHaveAttribute('src', /01-missa-de-angelis-kyrie\.mp3$/);
+  await repeat.click();
+  await expect(repeat).toHaveAttribute('aria-label', '单曲循环');
+  await expect.poll(() => audio.evaluate(element => element.loop && Number.isFinite(element.duration))).toBe(true);
+  await audio.evaluate(element => { element.currentTime = element.duration - .12; });
+  await expect.poll(() => audio.evaluate(element => !element.paused && element.currentTime < 5)).toBe(true);
+  await expect(audio).toHaveAttribute('src', /01-missa-de-angelis-kyrie\.mp3$/);
+  await repeat.click();
+  await page.locator('#playerShuffle').click();
+  await page.locator('#playerShowQueue').click();
+  const order = await page.locator('#playerQueueList button').allTextContents();
+  assert.equal(new Set(order).size, 5);
+  await page.locator('#playerCloseQueue').click();
+  for (const title of order.slice(1)) {
+    await page.locator('#playerNext').click();
+    await expect(page.locator('#playerBarTitle')).toHaveText(title);
+  }
+  await expect(page.locator('#playerNext')).toBeDisabled();
+});
+
+test('the listening room shares favorites and discussions with the library on mobile', async t => {
+  const {page,state} = await app(t,{signedIn:true,favorites:[2]});
+  await page.goto(`${origin}/index.html?view=player`);
+  await page.setViewportSize({width:320,height:740});
+  await expect(page.locator('#modeLabel')).toHaveText('已登录');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.locator('#playerFavorite').click();
+  await expect(page.locator('#playerFavorite')).toHaveAttribute('aria-pressed', 'true');
+  assert.equal(state.favorites.has(1), true);
+  await page.getByRole('button', {name:'我的收藏', exact:true}).click();
+  await expect(page.locator('.player-row')).toHaveCount(2);
+  await page.locator('#playerPlay').click();
+  await page.locator('#playerDiscuss').click();
+  await expect(page.locator('#commentsDescription')).toContainText('01 /');
+  await page.locator('#commentBody').fill('A note from the listening room.');
+  await page.locator('#postComment').click();
+  await expect(page.locator('#commentsList')).toContainText('A note from the listening room.');
+  assert.equal(state.posts.at(-1).track_id, 1);
+  assert.equal(await page.locator('#playerAudio').evaluate(audio => audio.paused), false);
+  await page.locator('#closeComments').click();
+  await page.locator('#languageToggle').click();
+  await expect(page.locator('#playerView h1')).toHaveText('Listening room');
+  await page.locator('#themeToggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+});
+
+test('the listening room shows album details for recordings that provide them', async t => {
+  const {page,context} = await app(t);
+  const source = await readFile(resolve(root, 'assets/local-recordings.js'), 'utf8');
+  await context.route('**/assets/local-recordings.js?*', route => route.fulfill({
+    contentType:'text/javascript',
+    body:source+`\nrecordingAlbums.sample = {title:'Example chant collection',artist:'Example ensemble',year:2024,artwork:'./assets/favicon.svg'};\nlocalRecordings[1].album = 'sample';\nlocalRecordings[2].album = 'sample';`,
+  }));
+  await page.goto(`${origin}/index.html?view=player`);
+  await page.locator('#playerAlbum').click();
+  await expect(page.locator('#playerAlbumTitle')).toHaveText('Example chant collection');
+  await expect(page.locator('#playerAlbumArtwork')).toBeVisible();
+  await expect(page.locator('#playerAlbumTracks button')).toHaveCount(2);
+  await page.locator('#playerAlbumTracks button').last().click();
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /02-requiem-aeternam\.mp3$/);
+  await page.locator('#playerShowQueue').click();
+  await expect(page.locator('#playerQueueList button')).toHaveCount(2);
+});
+
+test('blind period practice plays one recording and reveals its title only after answering', async t => {
+  const {page,context} = await app(t);
+  await context.addInitScript(() => { Math.random = () => .9999; });
+  await page.getByRole('link', {name:'盲听测试', exact:true}).click();
+  await page.setViewportSize({width:320,height:760});
+  await expect(page.locator('#quizPoolCount')).toContainText('5 段');
+  await expect(page.locator('#quizDifficulty')).toBeHidden();
+  await page.locator('#quizStart').click();
+  await expect(page.getByRole('heading')).toHaveCount(0);
+  await expect(page.locator('audio:visible')).toHaveCount(1);
+  await expect(page.locator('#quizOptions input')).toHaveCount(6);
+  await expect(page.locator('#quizRound')).not.toContainText('Missa de Angelis');
+  await expect(page.locator('#quizFeedback')).toBeHidden();
+  await page.locator('#quizAudio').evaluate(audio => audio.play());
+  await expect.poll(() => page.locator('#quizAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
+  await page.getByRole('radio', {name:'中世纪', exact:true}).check();
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizVerdict')).toHaveText('正确');
+  await expect(page.locator('#quizWork')).toContainText('Missa de Angelis');
+  const first = await page.locator('#quizAudio').getAttribute('src');
+  await page.locator('#quizNext').click();
+  await expect(page.locator('#quizAudio')).not.toHaveAttribute('src', first);
+  await expect(page.locator('#quizQuestionNumber')).toHaveText('第 2 题');
+  await expect(page.locator('#quizFeedback')).toBeHidden();
+  await page.locator('#quizLanguage').click();
+  await page.locator('#quizTheme').click();
+  await expect(page.locator('#quizPrompt')).toHaveText('Which period is this music from?');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  const source = await readFile(resolve(root, 'assets/local-recordings.js'), 'utf8');
+  await context.route('**/assets/local-recordings.js?*', route => route.fulfill({
+    contentType:'text/javascript', body:source+'\nlocalRecordings[12] = {src:localRecordings[1].src};',
+  }));
+  await page.reload();
+  await expect(page.locator('#quizPoolCount')).toContainText('6 on-site recordings');
+});
+
+test('blind composer and title practice support four choices and fuzzy text answers', async t => {
+  const {page,context} = await app(t);
+  await context.addInitScript(() => { Math.random = () => .9999; });
+  await page.goto(`${origin}/quiz.html`);
+  const mode = value => page.locator(`input[name=mode][value=${value}]`);
+  const difficulty = value => page.locator(`input[name=difficulty][value=${value}]`);
+  await mode('composer').check();
+  await page.locator('#quizStart').click();
+  await expect(page.locator('#quizOptions input')).toHaveCount(4);
+  await page.getByRole('radio', {name:'佚名', exact:true}).check();
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizVerdict')).toHaveText('正确');
+  await page.locator('#quizSettings').click();
+  await difficulty('hard').check();
+  await page.locator('#quizStart').click();
+  await page.locator('#quizText').fill('格里高利圣咏');
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizVerdict')).toHaveText('正确');
+  await page.locator('#quizSettings').click();
+  await mode('title').check();
+  await difficulty('easy').check();
+  await page.locator('#quizStart').click();
+  await expect(page.locator('#quizOptions input')).toHaveCount(4);
+  await page.getByRole('radio', {name:/Missa de Angelis/}).check();
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizVerdict')).toHaveText('正确');
+  await page.locator('#quizSettings').click();
+  await difficulty('hard').check();
+  await page.locator('#quizStart').click();
+  await expect(page.locator('#quizOptions input')).toHaveCount(0);
+  await page.locator('#quizText').fill('Missa de Angeliz');
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizVerdict')).toHaveText('正确');
+  await expect(page.locator('#quizSimilarity')).toHaveText(/相似度 9\d%/);
+});
+
 test('multi-part works show distinct selections, verified videos, searches, and scope warnings',async t=>{
   const {page}=await app(t);
   await page.setViewportSize({width:390,height:844});
@@ -458,7 +652,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.7 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -485,13 +679,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.7 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.5.7 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

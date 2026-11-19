@@ -1,9 +1,10 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.5.7';
+import { buildLibrary } from './library.js?v=1.6.0';
+import { buildPlayer } from './player.js?v=1.6.0';
 import { createAdminController } from './admin.js';
 import { createMessagesController } from './messages.js?v=1.5.0';
-import { createPresentation } from './presentation.js?v=1.5.7';
+import { createPresentation } from './presentation.js?v=1.6.0';
 import { createFavoritesController } from './favorites.js';
 import { createCommentsController } from './comments.js?v=1.5.0';
 import { createAccountController } from './account.js?v=1.3.0';
@@ -161,10 +162,29 @@ function makeButton(label, value) {
 }
 let library;
 function buildUI() {
-  library=buildLibrary({data,app,favorites,makeButton,openComments:id=>comments.open(id),openAuth:()=>toggleAuth(true)});
+  const openComments=id=>comments.open(id);
+  const openAuth=()=>toggleAuth(true);
+  if(new URLSearchParams(location.search).get('view')==='player') {
+    document.body.classList.add('player-page');
+    document.querySelector('.sidebar').hidden=true;
+    document.querySelector('.breadcrumb').hidden=true;
+    document.querySelector('.player-brand').hidden=false;
+    document.getElementById('main').hidden=true;
+    const homeLink=document.getElementById('homeLink');
+    homeLink.href='./index.html';
+    homeLink.textContent='返回曲目库';
+    homeLink.removeAttribute('aria-label');
+    const skipLink=document.querySelector('.skip-link');
+    skipLink.href='#playerView';
+    skipLink.textContent='跳到聆听室';
+    document.getElementById('closeWelcome').textContent='进入聆听室';
+    buildPlayer({data,favorites,openComments,openAuth});
+  } else {
+    library=buildLibrary({data,app,favorites,makeButton,openComments,openAuth});
+  }
   refreshStats();
 }
-function setAll(open) {library.setAll(open);}
+function setAll(open) {library?.setAll(open);}
 function exportProgress() {
   if (!isAdmin || !cloudReady) { notify('请先同步原有进度后再导出备份'); return; }
   const backup = { format: 'DMus-QE-listening-progress', version: 1, exportedAt: new Date().toISOString(), statuses: { ...states } };

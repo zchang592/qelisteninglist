@@ -10,6 +10,10 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 Open `http://127.0.0.1:8765/`. No frontend build or runtime package install is required. Use HTTP rather than opening `index.html` as a file, because the app uses JavaScript modules. Use the existing checkout; cloud tasks are already isolated and do not need an additional Git worktree unless requested.
 
+Open `http://127.0.0.1:8765/index.html?view=player` for the listening room. `assets/local-recordings.js` maps work IDs to on-site recordings and optional album information for both views.
+
+Open `http://127.0.0.1:8765/quiz.html` for blind listening practice. The quiz uses the same on-site recording catalogue. Set `quizTitle`, `titleAliases`, or `composerAliases` on a recording when its selection or accepted names need clarification.
+
 ## Enable registration and comments
 
 See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment alone does not create the database table or enable Auth signup. The browser uses only a publishable key; RLS and column grants enforce database access.

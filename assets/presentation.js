@@ -71,6 +71,11 @@ Object.assign(translations,{
  '已同步至云端':'Synced to cloud','云端数据已更新':'Cloud data updated','正在读取云端…':'Loading from cloud…','正在上传云端…':'Uploading…','无法读取云端':'Could not load from cloud',
  '你的听辨账号':'Your listening account','展开收听版本':'Show listening versions','处理中…':'Processing…'
 });
+Object.assign(translations, {
+ '打开聆听室':'Open the listening room','聆听室':'Listening room','进入聆听室':'Enter the listening room',
+ '跳到聆听室':'Skip to the listening room','返回曲目库':'Back to library','全部曲目':'All works',
+ '播放当前列表':'Play this list','仅看有站内音频的曲目':'On-site audio only','查看专辑':'View album','播放队列':'Playback queue','盲听测试':'Blind listening'
+});
 const originalText=new WeakMap(),originalPlaceholder=new WeakMap();
 const placeholders={'搜索作品、作曲家或编号…':'Search works, composers, or numbers…','输入你的密码':'Enter your password','输入管理员提供的邀请码':'Enter your invitation code','接收确认邮件的邮箱':'Email for confirmation','评论中显示的名字':'Your public display name','至少 8 位密码':'At least 8 characters','听到了什么特征？更喜欢哪个录音版本？':'What did you hear? Which recording do you prefer?'};
 export function createPresentation({getToken,isAdmin,apiFetch,notify}){

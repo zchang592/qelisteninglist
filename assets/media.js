@@ -2,6 +2,7 @@ import { earlyRecordings } from './early-recordings.js?v=1.5.7';
 import { laterRecordings } from './later-recordings.js?v=1.5.7';
 import { icon } from './icons.js?v=3';
 import { workParts, scopeNotes } from './work-parts.js?v=1.5.7';
+import { localRecordings } from './local-recordings.js?v=1.6.0';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -84,14 +85,6 @@ function pauseAudioPlayers() {
   document.querySelectorAll('.local-recording audio').forEach(audio=>audio.pause());
 }
 
-const localRecordings = {
-  1: ['01-missa-de-angelis-kyrie.mp3','Schola Gregoriana Mediolanensis'],
-  2: ['02-requiem-aeternam.mp3','Harpa Dei'],
-  3: ['03-dies-irae.mp3','Harpa Dei'],
-  4: ['04-sumer-is-icumen-in.mp3','Hilliard Ensemble'],
-  5: ['05-machaut-kyrie.mp3','Messe de Nostre Dame · Kyrie'],
-};
-
 function platformLink(name, url, logo) {
   const link = document.createElement('a');
   link.href = url;
@@ -124,9 +117,9 @@ export function createMediaControls(id, fullText) {
   if(local){
     const player=document.createElement('div');player.className='local-recording';
     const label=document.createElement('span');label.className='recording-platform-name';label.textContent='站内音频';
-    const credit=document.createElement('span');credit.className='local-recording-credit';credit.textContent=local[1];
-    const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=`./assets/audio/medieval/${local[0]}`;
-    audio.setAttribute('aria-label',`${fullText} · ${local[1]}`);
+    const credit=document.createElement('span');credit.className='local-recording-credit';credit.textContent=local.credit || '';
+    const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=local.src;
+    audio.setAttribute('aria-label',[fullText,local.credit].filter(Boolean).join(' · '));
     audio.addEventListener('play',()=>{document.querySelectorAll('.local-recording audio').forEach(other=>{if(other!==audio)other.pause();});clearEmbeddedPlayers();});
     player.append(label,credit,audio);block.append(player);
   }

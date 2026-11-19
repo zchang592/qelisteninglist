@@ -1,0 +1,314 @@
+import { data } from './data.js';
+import { localRecordings } from './local-recordings.js?v=1.6.0';
+import { mountIcons } from './icons.js?v=4';
+import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
+
+const $ = id => document.getElementById(id);
+const setup = $('quizSetup');
+const setupForm = $('quizSetupForm');
+const round = $('quizRound');
+const answerForm = $('quizAnswerForm');
+const options = $('quizOptions');
+const textAnswer = $('quizText');
+const audio = $('quizAudio');
+const anonymous = new Set(['Gregorian chant', 'Medieval 6-part polyphony', '16th century English folksong']);
+const anonymousAnswers = ['Anonymous', 'Traditional', 'Unknown', '佚名', '无名氏', '不详'];
+const composerAliases = {
+  'Gregorian chant': ['Gregorian', '格里高利圣咏', '格里高利圣歌'],
+  'Medieval 6-part polyphony': ['English round', '中世纪六声部复调'],
+  'Guillaume de Machaut': ['Machaut', '纪尧姆·德·马肖', '马肖', '马绍'],
+  'Johann Sebastian Bach': ['J. S. Bach', '约翰·塞巴斯蒂安·巴赫', '巴赫'],
+  'C. P. E. Bach': ['Carl Philipp Emanuel Bach', '卡尔·菲利普·埃马努埃尔·巴赫'],
+  'J. C. Bach': ['Johann Christian Bach', '约翰·克里斯蒂安·巴赫'],
+  'Mozart': ['Wolfgang Amadeus Mozart', '莫扎特'],
+  'Beethoven': ['Ludwig van Beethoven', '贝多芬'],
+  'Haydn': ['Joseph Haydn', '海顿'],
+  'Antonio Vivaldi': ['Vivaldi', '维瓦尔第'],
+  'Georg Frideric Handel': ['George Frideric Handel', 'Handel', 'Händel', '亨德尔'],
+  'François Couperin': ['Couperin', '库普兰'],
+};
+
+function readPreference(key, fallback) {
+  try { return localStorage.getItem(key) || fallback; }
+  catch { return fallback; }
+}
+
+function savePreference(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* The current page still uses the preference. */ }
+}
+
+let language = readPreference('qe-language', 'zh') === 'en' ? 'en' : 'zh';
+let theme = readPreference('qe-theme', 'light') === 'dark' ? 'dark' : 'light';
+const tr = (zh, en) => language === 'en' ? en : zh;
+const periods = data.map(([name]) => {
+  const index = name.search(/[\u3400-\u9fff]/);
+  return { en: name.slice(0, index).trim(), zh: name.slice(index) };
+});
+const withoutParentheses = text => text.replace(/\s*\([^)]*\)/g, '').trim();
+const creatorKey = name => anonymous.has(name) ? 'anonymous' : name;
+const catalogue = data.flatMap(([, composers], period) => composers.flatMap(([composer, works]) => works.map(([id, fullText]) => {
+  const recording = localRecordings[id];
+  const work = fullText.split(' — ').slice(1).join(' — ') || fullText;
+  const title = recording?.quizTitle || work;
+  const [parent, ...section] = title.split(': ');
+  return {
+    id, work, title, period, composer, parent, section: section.join(': '), recording,
+    titles: [title, withoutParentheses(title), ...(recording?.titleAliases || [])],
+  };
+})));
+const pool = catalogue.filter(track => track.recording?.src);
+const creators = [...new Set(catalogue.map(track => track.composer))];
+let current;
+let mode = 'period';
+let difficulty = 'easy';
+let questionNumber = 0;
+let remaining = [];
+let choices = [];
+let selected = '';
+let result;
+
+function shuffled(items) {
+  const order = [...items];
+  for (let index = order.length - 1; index > 0; index--) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [order[index], order[other]] = [order[other], order[index]];
+  }
+  return order;
+}
+
+function composerName(name) {
+  return creatorKey(name) === 'anonymous' ? tr('佚名', 'Anonymous') : name;
+}
+
+function composerAnswers(track) {
+  const name = track.composer;
+  const aliases = [...(composerAliases[name] || []), ...(track.recording?.composerAliases || [])];
+  if (anonymous.has(name)) return [...anonymousAnswers, name, ...aliases];
+  const surname = name.split(' ').at(-1);
+  if (creators.filter(creator => creator.split(' ').at(-1) === surname).length === 1) aliases.push(surname);
+  return [name, ...aliases];
+}
+
+function fourChoices(answer, preferred, others) {
+  const unique = new Map([[answer.key, answer]]);
+  for (const candidate of [...shuffled(preferred), ...shuffled(others)]) {
+    if (unique.size === 4) break;
+    if (!unique.has(candidate.key)) unique.set(candidate.key, candidate);
+  }
+  return shuffled(unique.values());
+}
+
+function makeChoices() {
+  if (mode === 'period') return periods.map((_, index) => ({ key: index, value: index }));
+  const samePeriod = catalogue.filter(track => track.period === current.period);
+  if (mode === 'composer') {
+    const choice = track => ({ key: creatorKey(track.composer), value: track.composer });
+    return fourChoices(choice(current), samePeriod.map(choice), catalogue.map(choice));
+  }
+  const choice = track => ({ key: normalizeAnswer(track.title), value: track.title });
+  return fourChoices(choice(current), samePeriod.map(choice), catalogue.map(choice));
+}
+
+function choiceLabel(choice) {
+  if (mode === 'period') return periods[choice.value][language];
+  if (mode === 'composer') return composerName(choice.value);
+  return choice.value;
+}
+
+function correctChoice() {
+  if (mode === 'period') return current.period;
+  if (mode === 'composer') return creatorKey(current.composer);
+  return normalizeAnswer(current.title);
+}
+
+function checkText() {
+  if (mode === 'composer') {
+    const others = catalogue.filter(track => creatorKey(track.composer) !== creatorKey(current.composer));
+    return gradeAnswer(textAnswer.value, { answers: composerAnswers(current), otherAnswers: others.flatMap(composerAnswers) });
+  }
+  const others = catalogue.filter(track => track !== current);
+  const partial = [];
+  if (current.section && others.some(track => track.parent === current.parent)) {
+    partial.push(current.parent, withoutParentheses(current.parent));
+    for (const match of current.parent.matchAll(/\(([^)]+)\)/g)) partial.push(match[1]);
+  }
+  if (current.section && others.some(track => normalizeAnswer(track.section) === normalizeAnswer(current.section))) partial.push(current.section);
+  return gradeAnswer(textAnswer.value, { answers: current.titles, partial, otherAnswers: others.flatMap(track => track.titles) });
+}
+
+function renderSettings() {
+  const selected = new FormData(setupForm);
+  $('quizDifficulty').hidden = selected.get('mode') === 'period';
+  $('quizThresholds').hidden = $('quizDifficulty').hidden || selected.get('difficulty') !== 'hard';
+  $('quizStart').disabled = !pool.length;
+  $('quizPoolCount').textContent = pool.length
+    ? tr(`题库有 ${pool.length} 段站内录音，新增录音会自动加入。`, `${pool.length} on-site recordings are available. New recordings are added to the practice pool as they arrive.`)
+    : tr('题库会在站内录音加入后开放。', 'Practice opens when recordings are added.');
+}
+
+function renderFeedback() {
+  const feedback = $('quizFeedback');
+  feedback.hidden = !result;
+  if (!result) return;
+  feedback.dataset.verdict = result.verdict;
+  $('quizVerdict').textContent = {
+    correct: tr('正确', 'Correct'), inexact: tr('不够准确', 'Close'), incorrect: tr('错误', 'Incorrect'),
+  }[result.verdict];
+  $('quizSimilarity').hidden = result.percent === undefined;
+  $('quizSimilarity').textContent = result.percent === undefined ? '' : tr(`相似度 ${result.percent}%`, `${result.percent}% similarity`);
+  $('quizReason').hidden = !result.reason;
+  $('quizReason').textContent = {
+    selection: tr('请补充具体乐章或选段。', 'Include the movement or selection.'),
+    different: tr('输入内容对应另一首作品或另一位作曲家。', 'That answer identifies another work or composer.'),
+    number: tr('作品或乐章编号不符。', 'The catalogue or movement number differs.'),
+  }[result.reason] || '';
+  const solution = mode === 'period' ? periods[current.period][language] : mode === 'composer' ? composerName(current.composer) : current.title;
+  $('quizSolution').textContent = tr(`正确答案 · ${solution}`, `Correct answer · ${solution}`);
+  $('quizWork').hidden = mode === 'title';
+  $('quizWork').textContent = mode === 'title' ? '' : current.work;
+}
+
+function renderQuestion() {
+  $('quizQuestionNumber').textContent = tr(`第 ${questionNumber} 题`, `Question ${questionNumber}`);
+  $('quizPrompt').textContent = {
+    period: tr('这段音乐属于哪个时期？', 'Which period is this music from?'),
+    composer: tr('这段音乐的作曲家是谁？', 'Who composed this music?'),
+    title: tr('你听到的是哪首作品？', 'Which work are you hearing?'),
+  }[mode];
+  const freeText = mode !== 'period' && difficulty === 'hard';
+  textAnswer.hidden = !freeText;
+  textAnswer.required = freeText && !result;
+  textAnswer.disabled = !freeText || !!result;
+  textAnswer.placeholder = tr('在这里输入答案', 'Type your answer');
+  options.replaceChildren();
+  for (const [index, choice] of choices.entries()) {
+    const option = document.createElement('label');
+    option.className = 'quiz-option';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'answer';
+    input.value = String(index);
+    input.required = !result;
+    input.checked = selected === input.value;
+    input.disabled = !!result;
+    if (result) {
+      if (choice.key === correctChoice()) option.dataset.correct = 'true';
+      else if (input.checked) option.dataset.incorrect = 'true';
+    }
+    const caption = document.createElement('span');
+    caption.textContent = choiceLabel(choice);
+    option.append(input, caption);
+    options.append(option);
+  }
+  $('quizSubmit').hidden = !!result;
+  renderFeedback();
+}
+
+function nextQuestion() {
+  if (!remaining.length) {
+    remaining = shuffled(pool);
+    if (remaining.length > 1 && remaining[0] === current) [remaining[0], remaining[1]] = [remaining[1], remaining[0]];
+  }
+  current = remaining.shift();
+  if (!current) return;
+  questionNumber++;
+  choices = difficulty === 'hard' ? [] : makeChoices();
+  selected = '';
+  result = undefined;
+  textAnswer.value = '';
+  textAnswer.setCustomValidity('');
+  $('quizSolution').textContent = '';
+  $('quizWork').textContent = '';
+  $('quizAudioError').hidden = true;
+  audio.pause();
+  audio.src = current.recording.src;
+  if ('mediaSession' in navigator && 'MediaMetadata' in window) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: tr('盲听片段', 'Blind listening excerpt'), artist: 'QE Listening List' });
+  }
+  renderQuestion();
+  $('quizPrompt').focus();
+}
+
+function applyLanguage() {
+  document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+  document.title = `QE Listening List · ${tr('盲听测试', 'Blind listening')}`;
+  $('quizLanguage').textContent = tr('EN', '中');
+  $('quizLanguage').setAttribute('aria-label', tr('Switch to English', '切换至中文'));
+  audio.setAttribute('aria-label', tr('盲听片段', 'Blind listening excerpt'));
+  round.setAttribute('aria-label', tr('盲听题目', 'Blind listening question'));
+  for (const element of document.querySelectorAll('[data-zh]')) element.textContent = element.dataset[language];
+  renderSettings();
+  if (!round.hidden) renderQuestion();
+  $('quizTheme').setAttribute('aria-label', tr('切换深浅色模式', 'Switch color theme'));
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = theme;
+  $('quizTheme').textContent = theme === 'dark' ? '☀' : '☾';
+}
+
+setupForm.addEventListener('change', renderSettings);
+setupForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (!pool.length) return;
+  const values = new FormData(setupForm);
+  mode = values.get('mode');
+  difficulty = mode === 'period' ? 'easy' : values.get('difficulty');
+  questionNumber = 0;
+  remaining = [];
+  current = undefined;
+  setup.hidden = true;
+  round.hidden = false;
+  nextQuestion();
+});
+
+answerForm.addEventListener('change', event => {
+  if (event.target.name === 'answer') selected = event.target.value;
+});
+textAnswer.addEventListener('input', () => textAnswer.setCustomValidity(''));
+answerForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (result) return;
+  if (difficulty === 'hard') {
+    if (!normalizeAnswer(textAnswer.value)) {
+      textAnswer.setCustomValidity(tr('请输入答案。', 'Enter an answer.'));
+      textAnswer.reportValidity();
+      return;
+    }
+    result = checkText();
+  } else {
+    const value = new FormData(answerForm).get('answer');
+    if (value === null) return;
+    const choice = choices[Number(value)];
+    result = { verdict: choice?.key === correctChoice() ? 'correct' : 'incorrect' };
+  }
+  renderQuestion();
+  $('quizFeedback').focus();
+});
+
+$('quizNext').addEventListener('click', nextQuestion);
+$('quizReplace').addEventListener('click', nextQuestion);
+$('quizSettings').addEventListener('click', () => {
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+  if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+  round.hidden = true;
+  setup.hidden = false;
+  setupForm.elements.namedItem('mode')[0].focus();
+});
+audio.addEventListener('error', () => { if (!round.hidden && audio.error) $('quizAudioError').hidden = false; });
+$('quizLanguage').addEventListener('click', () => {
+  language = language === 'en' ? 'zh' : 'en';
+  savePreference('qe-language', language);
+  applyLanguage();
+});
+$('quizTheme').addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  savePreference('qe-theme', theme);
+  applyTheme();
+});
+
+mountIcons();
+applyLanguage();
+applyTheme();
