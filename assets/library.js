@@ -1,5 +1,5 @@
-import { icon } from './icons.js?v=3';
-import { createMediaControls } from './media.js?v=1.6.3';
+import { icon } from './icons.js?v=1.6.4';
+import { createMediaControls } from './media.js?v=1.6.4';
 import { selectedSingleTracks, workParts } from './work-parts.js?v=1.5.7';
 
 const $=id=>document.getElementById(id);
@@ -9,7 +9,7 @@ function splitPeriod(period) {
   return [period.slice(0,chinese).trim(),period.slice(chinese)];
 }
 
-export function buildLibrary({data,app,favorites,makeButton,openComments,openAuth}) {
+export function buildLibrary({data,app,favorites,makeButton,openComments,openAuth,workDetails}) {
   let selected=0;
   let beforeSearch=0;
   let favoriteGroup='period';
@@ -55,12 +55,48 @@ export function buildLibrary({data,app,favorites,makeButton,openComments,openAut
     const media=createMediaControls(id,fullText);
     const audio=media.querySelector('.local-recording');if(audio)title.append(audio);
     row.append(media);
+    const sources=[...title.querySelectorAll('audio')];
+    const preview=media.querySelector('.version-preview[aria-expanded]');
+    if(sources.length || preview) {
+      row.classList.add('track-playable');
+      const play=document.createElement('button');
+      play.type='button';play.className='track-play';
+      function updatePlay() {
+        const playing=sources.some(source=>!source.paused && !source.ended);
+        play.replaceChildren(icon(playing?'pause':'play',15),document.createTextNode(titleOnly.slice(0,movement<0?undefined:movement)));
+        play.setAttribute('aria-label',`${document.documentElement.lang==='en'?(playing?'Pause':'Play'):(playing?'暂停':'播放')} ${titleOnly}`);
+      }
+      function togglePlayback() {
+        const playing=sources.find(source=>!source.paused && !source.ended);
+        if(playing)playing.pause();
+        else if(sources.length)sources[0].play().catch(()=>{});
+        else {
+          media.querySelector('.recording-versions').open=true;
+          if(preview.closest('.work-parts'))preview.closest('.work-parts').open=true;
+          preview.dataset.autoplay='true';
+          try { preview.click(); } finally { delete preview.dataset.autoplay; }
+        }
+      }
+      updatePlay();heading.replaceChildren(play);
+      play.addEventListener('click',togglePlayback);
+      for(const source of sources)for(const event of ['play','pause','ended','error'])source.addEventListener(event,updatePlay);
+      row.addEventListener('click',event=>{
+        const control=event.target.closest('button,a,input,select,textarea,summary,audio,video,iframe,details,label');
+        if(!row.contains(control) && window.getSelection()?.isCollapsed!==false)togglePlayback();
+      });
+    }
     const footer=document.createElement('div');footer.className='track-footer';
     const actions=document.createElement('div');actions.className='actions';
     const discuss=document.createElement('button');discuss.type='button';discuss.className='copy comment-button';
     discuss.setAttribute('aria-haspopup','dialog');discuss.setAttribute('aria-label',`打开第 ${id} 首的评论窗口`);
     discuss.append(icon('comment',13),document.createTextNode('讨论'));discuss.addEventListener('click',()=>openComments(id));
-    actions.append(discuss,makeButton('复制标题',titleOnly));
+    actions.append(discuss);
+    for(const [caption,symbol,open] of [['曲目背景','book',workDetails.openBackground],['反馈','flag',workDetails.openReport]]) {
+      const button=document.createElement('button');button.type='button';button.className='copy work-action';
+      button.setAttribute('aria-haspopup','dialog');button.append(icon(symbol,13),document.createTextNode(caption));
+      button.addEventListener('click',()=>open(id));actions.append(button);
+    }
+    actions.append(makeButton('复制标题',titleOnly));
     const favorite=document.createElement('button');favorite.type='button';favorite.className='favorite-button';favorite.dataset.favoriteId=id;
     const label=document.createElement('span');label.className='favorite-label';label.textContent='收藏';
     favorite.append(icon('heart',17),label);favorite.addEventListener('click',()=>favorites.toggle(id));

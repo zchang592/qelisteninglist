@@ -8,15 +8,15 @@
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./assets/style.css?v=1.5.7">
   <link rel="stylesheet" href="./assets/editorial.css?v=1.5.7">
-  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.1">
-  <script type="module" src="./assets/quiz.js?v=1.6.3"></script>
+  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.4">
+  <script type="module" src="./assets/quiz.js?v=1.6.4"></script>
 </head>
 <body class="quiz-page">
   <a class="skip-link" href="#quizMain" data-zh="跳到练习" data-en="Skip to practice">跳到练习</a>
   <header class="quiz-header">
     <a class="quiz-brand" href="./home.html"><span class="qe-seal" aria-hidden="true">Q<span>E</span></span><span>QE Listening List</span></a>
     <nav aria-label="QE Listening List">
-      <a class="quiz-button" href="./index.html?view=player" data-zh="聆听室" data-en="Listening room">聆听室</a>
+      <a class="quiz-button quiz-primary" href="./index.html?view=player" data-zh="聆听室" data-en="Listening room">聆听室</a>
       <button class="quiz-button quiz-icon" type="button" id="quizLanguage" aria-label="Switch language">EN</button>
       <button class="quiz-button quiz-icon" type="button" id="quizTheme" aria-label="切换深浅色模式">☾</button>
     </nav>
@@ -82,6 +82,15 @@
           <p id="quizReason" hidden></p>
           <p id="quizSolution"></p>
           <p id="quizWork" hidden></p>
+          <dl class="quiz-answer-meta">
+            <div><dt data-zh="作曲家" data-en="Composer">作曲家</dt><dd id="quizAnswerComposer"></dd></div>
+            <div><dt data-zh="时期" data-en="Period">时期</dt><dd id="quizAnswerPeriod"></dd></div>
+            <div><dt data-zh="创作时间" data-en="Composition">创作时间</dt><dd id="quizAnswerYear"></dd></div>
+          </dl>
+          <div class="quiz-answer-links">
+            <a class="quiz-button" id="quizWorkBackground" target="_blank" rel="noopener" data-zh="曲目背景" data-en="Work background">曲目背景</a>
+            <a class="quiz-button" id="quizWorkReport" target="_blank" rel="noopener" data-zh="反馈" data-en="Report">反馈</a>
+          </div>
           <button type="button" class="quiz-button quiz-primary" id="quizNext" data-zh="下一题" data-en="Next question">下一题</button>
         </section>
       </div>

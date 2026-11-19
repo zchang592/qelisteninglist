@@ -8,6 +8,7 @@ import {resolve,extname,sep} from 'node:path';
 import {chromium,expect} from 'playwright/test';
 import {recordingsForWork} from '../assets/local-recordings.js';
 import {data} from '../assets/data.js';
+import {workBackgrounds} from '../assets/work-backgrounds.js';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const releaseVersion=JSON.parse(await readFile(resolve(root,'package.json'),'utf8')).version;
@@ -64,12 +65,12 @@ function recordings(term) {
     {trackName:'Wrong work',artistName:'Other',previewUrl:'https://audio-ssl.mzstatic.com/wrong.mp3'}
   ]};
 }
-async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favoritesError=false,favoritesWriteError=false,legacyPending=null,missing=false,legacy=false,postError=false,profileError=false,mediaError=false,autoConfirm=false,refreshFails=false}={}) {
+async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favoritesError=false,favoritesWriteError=false,legacyPending=null,missing=false,legacy=false,postError=false,profileError=false,mediaError=false,autoConfirm=false,refreshFails=false,reportFailsOnce=false}={}) {
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
   t.after(()=>context.close());
   const requests=[];const errors=[];
   const state={comments:structuredClone(comments),favorites:new Set(favorites),posts:[],progress:[],progressRows:new Map([[1,{track_id:1,status:1,note:'Listen for monophonic texture.'}]]),signups:[],media:[],deleted:[],refreshes:0,
-    user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[],introduction:{content_zh:'',content_en:''},invites:[]};
+    user:{...USER,user_metadata:{...USER.user_metadata}},userUpdates:[],introduction:{content_zh:'',content_en:''},invites:[],reports:[]};
   await context.route('**/*',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.origin===origin){await route.continue();return;}
@@ -107,6 +108,14 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
         return json(state.invites);
       }
       if(url.pathname.endsWith('/rpc/claim_qe_admin'))return json({});
+      if(url.pathname.endsWith('/listening_reports'))return json(admin?state.reports:[]);
+      if(url.pathname.endsWith('/rpc/qe_submit_report')){
+        if(!request.headers().authorization)return json({message:'Sign in required'},401);
+        if(reportFailsOnce){reportFailsOnce=false;return json({message:'Unavailable'},503);}
+        const {request_id,work_id,feedback,reply_email}=request.postDataJSON();
+        state.reports.push({id:request_id,track_id:work_id,body:feedback,contact_email:reply_email,author_name:state.user.user_metadata.display_name,created_at:new Date().toISOString()});
+        return json(null);
+      }
       if(url.pathname.endsWith('/rpc/qe_comment_reply_counts')){
         const roots=request.postDataJSON().root_ids;
         return json(roots.map(root_id=>({root_id,reply_count:state.comments.filter(row=>row.parent_id===root_id).length})));
@@ -404,6 +413,70 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await opus.evaluate(audio=>audio.play());
   await expect.poll(()=>opus.evaluate(audio=>audio.currentTime)).toBeGreaterThan(0);
 });
+
+test('work backgrounds cover the catalogue and follow the page language and discussion', async t => {
+  assert.equal(Object.keys(workBackgrounds).length, 160);
+  for (const id of workIds) {
+    const work = workBackgrounds[id];
+    assert.equal(new URL(work.source).protocol, 'https:');
+    for (const {composer,year,description} of [work.zh,work.en]) assert.ok(composer && year && description);
+  }
+  const {page} = await app(t);
+  await page.locator('#trackSearch').fill('67');
+  const track=page.locator('#track-67');
+  await track.getByRole('button',{name:'曲目背景',exact:true}).click();
+  await expect(page.locator('#workBackgroundContent')).toContainText('路德维希·凡·贝多芬 · 主要创作于1803–1804年');
+  await expect(page.locator('#workBackgroundContent a')).toHaveAttribute('href',workBackgrounds[67].source);
+  await page.locator('#closeWorkBackground').click();
+  await page.locator('#languageToggle').click();
+  await track.getByRole('button',{name:'Work background',exact:true}).click();
+  await expect(page.locator('#workBackgroundContent')).toContainText('Ludwig van Beethoven · Composed mainly 1803–1804');
+  await page.locator('#closeWorkBackground').click();
+  await track.locator('.comment-button').click();
+  await expect(page.locator('#discussionBackground')).toContainText(workBackgrounds[67].en.description);
+  await page.setViewportSize({width:320,height:760});
+  await expect(page.locator('#discussionBackground')).toBeInViewport();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+});
+
+test('the library card plays from its surface and separate actions leave playback alone', async t => {
+  const {page} = await app(t);
+  const track=page.locator('#track-1');
+  const audio=track.locator('audio');
+  await track.locator('.track-index').click();
+  await expect.poll(() => audio.evaluate(element => element.currentTime)).toBeGreaterThan(0);
+  await track.locator('.track-index').click();
+  await expect.poll(() => audio.evaluate(element => element.paused)).toBe(true);
+  await track.getByRole('button',{name:'反馈',exact:true}).click();
+  await expect(page.locator('#reportGuest')).toBeVisible();
+  await expect.poll(() => audio.evaluate(element => element.paused)).toBe(true);
+  await page.locator('#closeWorkReport').click();
+  await page.locator('#trackSearch').fill('104');
+  await page.locator('#track-104 .track-index').click();
+  await expect(page.locator('#track-104 .youtube-embed')).toHaveAttribute('src',/autoplay=1/);
+});
+
+test('a private report keeps its draft on failure and appears in the admin inbox', async t => {
+  const {page,requests} = await app(t,{admin:true,signedIn:true,reportFailsOnce:true});
+  await page.locator('#track-1').getByRole('button',{name:'反馈',exact:true}).click();
+  await page.locator('#workReportBody').fill('Please check the recorded movement.');
+  await page.locator('#workReportEmail').fill('reply@example.org');
+  await page.locator('#workReportSubmit').click();
+  await expect(page.locator('#workReportFeedback')).toContainText('发送失败');
+  await expect(page.locator('#workReportBody')).toHaveValue('Please check the recorded movement.');
+  await page.locator('#workReportSubmit').click();
+  await expect(page.locator('#workReportDialog')).toBeHidden();
+  const submissions=requests.filter(request=>request.path.endsWith('/rpc/qe_submit_report'));
+  assert.equal(submissions.length,2);
+  assert.ok(submissions.every(request=>request.authenticated));
+  assert.deepEqual(submissions[0].body,submissions[1].body);
+  await page.locator('#avatarTrigger').hover();
+  await page.locator('#profileMessages').click();
+  await page.getByRole('button',{name:'查看 Test listener 的反馈'}).click();
+  await expect(page.locator('#workReportReview')).toBeVisible();
+  await expect(page.locator('#reportReviewBody')).toContainText('Please check the recorded movement.');
+  await expect(page.locator('#reportReviewEmail')).toHaveText('reply@example.org');
+});
 test('the listening room browses the full catalogue and plays only available audio', async t => {
   const {page} = await app(t);
   await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
@@ -508,7 +581,7 @@ test('the listening room shares favorites and discussions with the library on mo
   await page.getByRole('button', {name:'我的收藏', exact:true}).click();
   await expect(page.locator('.player-row')).toHaveCount(2);
   await page.locator('#playerPlay').click();
-  await track.locator('[aria-haspopup="dialog"]').click();
+  await track.getByRole('button',{name:/^讨论 /}).click();
   await expect(page.locator('#commentsDescription')).toContainText('01 /');
   await page.locator('#commentBody').fill('A note from the listening room.');
   await page.locator('#postComment').click();
@@ -554,12 +627,18 @@ test('blind period practice plays one recording and reveals its title only after
   await expect(page.locator('#quizOptions input')).toHaveCount(6);
   await expect(page.locator('#quizRound')).not.toContainText('Missa de Angelis');
   await expect(page.locator('#quizFeedback')).toBeHidden();
+  await expect(page.locator('#quizAnswerComposer')).toHaveText('');
+  await expect(page.locator('#quizWorkReport')).not.toHaveAttribute('href',/.+/);
   await page.locator('#quizAudio').evaluate(audio => audio.play());
   await expect.poll(() => page.locator('#quizAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
   await page.getByRole('radio', {name:'中世纪', exact:true}).check();
   await page.locator('#quizSubmit').click();
   await expect(page.locator('#quizVerdict')).toHaveText('正确');
   await expect(page.locator('#quizWork')).toContainText('Missa de Angelis');
+  await expect(page.locator('#quizAnswerComposer')).toHaveText(workBackgrounds[1].zh.composer);
+  await expect(page.locator('#quizAnswerPeriod')).toHaveText('中世纪');
+  await expect(page.locator('#quizAnswerYear')).toHaveText(workBackgrounds[1].zh.year);
+  await expect(page.locator('#quizWorkReport')).toHaveAttribute('href','./index.html?track=1&panel=report');
   const first = await page.locator('#quizAudio').getAttribute('src');
   await page.locator('#quizNext').click();
   await expect(page.locator('#quizAudio')).not.toHaveAttribute('src', first);

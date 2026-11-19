@@ -28,6 +28,8 @@ See [the Supabase setup steps](docs/supabase-setup.md). A frontend deployment al
 - `assets/app.js`: private progress synchronization, account flows, and application startup.
 - `assets/account.js` and `assets/avatars.js`: profile menu, nickname updates, and the ten locally drawn note avatars.
 - `assets/comments.js`: separate per-work discussion dialog, threaded replies, and authenticated comment requests.
+- `assets/work-backgrounds.js`: concise bilingual background notes and source links for all 160 catalogue IDs.
+- `assets/work-details.js`: background dialogs and private work reports. Apply migration `202611190005_private_work_reports.sql` to enable reports in the administrator inbox.
 - `assets/style.css`: responsive visual system; fonts and icons are served locally.
 - `supabase/migrations/`: versioned database changes.
 

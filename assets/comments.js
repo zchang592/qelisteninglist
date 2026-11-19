@@ -1,6 +1,7 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { icon } from './icons.js';
 import { avatarForUser, noteAvatar } from './avatars.js?v=1.3.0';
+import { renderWorkBackground } from './work-details.js?v=1.6.4';
 
 const ENDPOINT = `${SUPABASE_URL}/rest/v1/listening_comments`;
 const COUNTS_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/qe_comment_reply_counts`;
@@ -9,13 +10,14 @@ const PAGE_SIZE = 20;
 const FIELDS = 'id,track_id,user_id,author_name,body,created_at';
 const THREAD_FIELDS = `${FIELDS},parent_id,reply_to_id,avatar_key`;
 
-export function createCommentsController({data, getUser, getToken, openAuth, apiFetch, notify}) {
+export function createCommentsController({data, getUser, getToken, openAuth, openReport, apiFetch, notify}) {
   const tracks = new Map(data.flatMap(([,composers])=>composers.flatMap(([,tracks])=>tracks)));
   const dialog = $('commentsDialog');
   const select = $('commentTrack');
   const body = $('commentBody');
   const form = $('commentForm');
   const list = $('commentsList');
+  $('discussionReport').addEventListener('click', () => { if (activeTrack) openReport(activeTrack); });
   const drafts = new Map();
   const replyDrafts = new Map();
   let activeTrack = null;
@@ -282,6 +284,8 @@ export function createCommentsController({data, getUser, getToken, openAuth, api
     activeTrack=id;select.value=id || '';
     $('commentsTitle').textContent=id?'曲目讨论':'听辨讨论';
     $('commentsDescription').textContent=id?`${String(id).padStart(2,'0')} / ${tracks.get(id)}`:'从中世纪到二十世纪，交流作品、听辨特征与录音版本。';
+    $('discussionBackground').hidden=!id;
+    renderWorkBackground($('discussionBackgroundContent'),id);
     body.value=drafts.get(id) || '';updateCounter();feedback();updateAuth();return load();
   }
   function open(id=null) {

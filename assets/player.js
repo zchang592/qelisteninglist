@@ -1,4 +1,4 @@
-import { icon } from './icons.js?v=4';
+import { icon } from './icons.js?v=1.6.4';
 import { recordingsForWork, recordingAlbums } from './local-recordings.js?v=1.6.3';
 import { createVisualizer } from './player-visualizer.js?v=1.6.0';
 
@@ -20,7 +20,7 @@ function shuffleTracks(tracks) {
   return order;
 }
 
-export function buildPlayer({ data, favorites, openComments, openAuth }) {
+export function buildPlayer({ data, favorites, openComments, openAuth, workDetails }) {
   const $ = id => document.getElementById(id);
   const root = $('playerView');
   const audio = $('playerAudio');
@@ -152,7 +152,10 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     favorite.dataset.playerFavorite = track.id;
     const discuss = makeIconButton('comment', tr(`讨论 ${track.title}`, `Discuss ${track.title}`), () => openComments(track.id));
     discuss.setAttribute('aria-haspopup', 'dialog');
-    actions.append(favorite, discuss);
+    const background = makeIconButton('book', tr(`曲目背景 · ${track.title}`, `About ${track.title}`), () => workDetails.openBackground(track.id));
+    const report = makeIconButton('flag', tr(`反馈 · ${track.title}`, `Report ${track.title}`), () => workDetails.openReport(track.id));
+    for (const button of [background, report]) button.setAttribute('aria-haspopup', 'dialog');
+    actions.append(favorite, discuss, background, report);
     row.append(action, actions);
     trackRows.set(row, { track, row, action, symbol });
     return row;
@@ -321,6 +324,8 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     favorite.hidden = !current;
     favorite.dataset.playerFavorite = current?.id || '';
     $('playerDiscuss').hidden = !current;
+    $('playerBackground').hidden = !current;
+    $('playerReport').hidden = !current;
     $('playerAlbum').hidden = !recordingAlbums[current?.recording.album];
     updateFavorites();
     renderTime();
@@ -502,6 +507,8 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
   $('playerAlbumArtwork').addEventListener('error', event => { event.currentTarget.hidden = true; });
   $('playerFavorite').addEventListener('click', () => { if (current) favorites.toggle(current.id); });
   $('playerDiscuss').addEventListener('click', () => { if (current) openComments(current.id); });
+  $('playerBackground').addEventListener('click', () => { if (current) workDetails.openBackground(current.id); });
+  $('playerReport').addEventListener('click', () => { if (current) workDetails.openReport(current.id); });
   audio.addEventListener('ended', () => { renderPlayback(); if (!audio.loop) advance(1); });
   for (const event of ['play', 'pause', 'playing']) audio.addEventListener(event, renderPlayback);
   for (const event of ['loadedmetadata', 'timeupdate', 'durationchange']) audio.addEventListener(event, renderTime);

@@ -1,15 +1,16 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.6.3';
-import { buildPlayer } from './player.js?v=1.6.3';
+import { buildLibrary } from './library.js?v=1.6.4';
+import { buildPlayer } from './player.js?v=1.6.4';
 import { createAdminController } from './admin.js';
-import { createMessagesController } from './messages.js?v=1.5.0';
-import { createPresentation } from './presentation.js?v=1.6.0';
+import { createMessagesController } from './messages.js?v=1.6.4';
+import { createPresentation } from './presentation.js?v=1.6.4';
 import { createFavoritesController } from './favorites.js';
-import { createCommentsController } from './comments.js?v=1.5.0';
+import { createCommentsController } from './comments.js?v=1.6.4';
 import { createAccountController } from './account.js?v=1.3.0';
 import { randomAvatar } from './avatars.js?v=1.3.0';
-import { mountIcons } from './icons.js?v=3';
+import { mountIcons } from './icons.js?v=1.6.4';
+import { createWorkDetails } from './work-details.js?v=1.6.4';
 
 const API = `${SUPABASE_URL}/rest/v1/listening_progress`;
 const PENDING_KEY = 'dmus-qe-listening-cloud-pending-v1';
@@ -178,9 +179,9 @@ function buildUI() {
     skipLink.href='#playerView';
     skipLink.textContent='跳到聆听室';
     document.getElementById('closeWelcome').textContent='进入聆听室';
-    buildPlayer({data,favorites,openComments,openAuth});
+    buildPlayer({data,favorites,openComments,openAuth,workDetails});
   } else {
-    library=buildLibrary({data,app,favorites,makeButton,openComments,openAuth});
+    library=buildLibrary({data,app,favorites,makeButton,openComments,openAuth,workDetails});
   }
   refreshStats();
 }
@@ -490,6 +491,7 @@ function setAdmin(value) {
   if(!isAdmin){clearTimeout(syncTimer);clearTimeout(retryTimer);admin.clear();messages.reset();}
   else messages.refresh();
   comments.updateAuth();
+  workDetails.updateAuth();
   account.render();
   favorites.userChanged();
 }
@@ -611,14 +613,18 @@ async function updateAccountProfile(changes) {
   setAdmin(isAdmin);
   comments.updateProfile(updated);
 }
-const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
+const comments=createCommentsController({data,getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),openReport:id=>workDetails.openReport(id),apiFetch,notify});
 const favorites=createFavoritesController({getUser:()=>currentUser,getToken:validAccessToken,openAuth:()=>toggleAuth(true),apiFetch,notify});
 const admin=createAdminController({data,stateButtons,isAdmin:()=>isAdmin,changeState,renderState,refreshStats});
-const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>currentUser,getToken:validAccessToken,apiFetch,openComment:row=>comments.openComment(row)});
+const workDetails=createWorkDetails({data,getUser:()=>currentUser,getToken:validAccessToken,apiFetch,openAuth:()=>toggleAuth(true),notify,onReport:()=>messages.refresh()});
+const messages=createMessagesController({isAdmin:()=>isAdmin,getUser:()=>currentUser,getToken:validAccessToken,apiFetch,openComment:row=>comments.openComment(row),openReport:workDetails.openReview,resetReport:workDetails.resetReview});
 const account=createAccountController({getUser:()=>currentUser,updateProfile:updateAccountProfile,openAuth:()=>toggleAuth(true),openAdmin:()=>admin.open(),openMessages:()=>messages.open(),signOut});
 mountIcons();
 buildUI();setAdmin(false);refreshStats();restoreAuth();
 const presentation=createPresentation({getToken:validAccessToken,isAdmin:()=>isAdmin,apiFetch,notify});
+const workLink=new URLSearchParams(location.search);
+if(workLink.get('panel')==='report')workDetails.openReport(Number(workLink.get('track')));
+if(workLink.get('panel')==='background')workDetails.openBackground(Number(workLink.get('track')));
 
 document.getElementById('adminToggle').addEventListener('click',()=>toggleAuth(true));
 document.getElementById('closeAuth').addEventListener('click',()=>toggleAuth(false));

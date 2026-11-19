@@ -2,6 +2,7 @@ import { data } from './data.js';
 import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.3';
 import { icon, mountIcons } from './icons.js?v=4';
 import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
+import { workBackgrounds } from './work-backgrounds.js?v=1.6.4';
 
 const $ = id => document.getElementById(id);
 const setup = $('quizSetup');
@@ -259,6 +260,12 @@ function renderFeedback() {
   const work = mode === 'title' ? '' : current.work;
   $('quizWork').textContent = [work, current.recording.name].filter(Boolean).join(' · ');
   $('quizWork').hidden = !$('quizWork').textContent;
+  const background = workBackgrounds[current.id][language];
+  $('quizAnswerComposer').textContent = background.composer;
+  $('quizAnswerPeriod').textContent = periods[current.period][language];
+  $('quizAnswerYear').textContent = background.year;
+  $('quizWorkBackground').href = `./index.html?track=${current.id}&panel=background`;
+  $('quizWorkReport').href = `./index.html?track=${current.id}&panel=report`;
 }
 
 function renderQuestion() {
@@ -312,6 +319,8 @@ function nextQuestion() {
   textAnswer.setCustomValidity('');
   $('quizSolution').textContent = '';
   $('quizWork').textContent = '';
+  for (const id of ['quizAnswerComposer', 'quizAnswerPeriod', 'quizAnswerYear']) $(id).textContent = '';
+  for (const id of ['quizWorkBackground', 'quizWorkReport']) $(id).removeAttribute('href');
   $('quizAudioError').hidden = true;
   audio.pause();
   audio.src = current.recording.src;

@@ -121,3 +121,67 @@ html[data-theme=dark] :is(.account-button,.text-button,.sidebar-discussion,.peri
   body:not(.home-page) .avatar-popover{position:fixed;top:var(--phone-header);right:10px;max-width:calc(100vw - 20px)}
 }
 @media(max-width:359px){body:not(.home-page){--phone-rail:86px}body:not(.home-page) .sidebar .period-link-name{font-size:9px}}
+
+.track-playable { cursor: pointer; }
+.track-playable :is(button, a, summary) { cursor: pointer; }
+.track-play {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.track-play svg { flex-shrink: 0; align-self: center; color: var(--green); }
+.track-play:hover { color: var(--green); }
+.actions .work-action { display: inline-flex; align-items: center; gap: 5px; }
+.comments-dialog:has(.discussion-background:not([hidden])) { width: 880px; }
+.comments-main {
+  display: flex;
+  align-items: flex-start;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.comments-main .comments-content { min-width: 0; overflow: visible; }
+.discussion-background {
+  position: sticky;
+  top: 0;
+  flex: 0 0 clamp(220px, 32%, 270px);
+  margin: 0 24px 20px 0;
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--green-soft);
+}
+.discussion-background h3 { margin: 0 0 7px; font-size: 13px; }
+.work-detail-dialog { width: min(560px, calc(100% - 24px)); padding: clamp(18px, 5vw, 28px); }
+.work-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.work-detail-header h2 { margin: 4px 0 10px; font-size: clamp(19px, 4vw, 25px); overflow-wrap: anywhere; }
+.work-detail-header :is(.eyebrow, #workReportTrack) { margin: 0; }
+.work-detail-header .icon-button { flex-shrink: 0; }
+.work-background-meta { color: var(--green); font-size: 13px; font-weight: 650; margin: 0 0 6px; }
+.work-background-description { margin: 0 0 8px; font-size: 14px; line-height: 1.7; }
+.discussion-background .work-background-description { font-size: 12px; }
+.work-background-source { display: inline-flex; align-items: center; min-height: 32px; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.work-report-form { display: grid; gap: 7px; margin-top: 12px; }
+.work-report-form [type=submit] { justify-self: start; }
+.work-report-form :is(input, textarea) {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+#workReportReview .message-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+#reportReviewEmail { overflow-wrap: anywhere; }
+
+@media (max-width: 680px) {
+  .comments-main { flex-direction: column; align-items: stretch; }
+  .discussion-background { order: -1; position: static; flex: none; margin: 0 19px 12px; padding: 10px 13px; }
+}

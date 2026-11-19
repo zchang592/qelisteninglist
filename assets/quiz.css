@@ -182,3 +182,13 @@ html[data-theme=dark] .quiz-page {
   .quiz-scope-composers { padding-left: 8px; }
   .quiz-scope-choice { gap: 7px; padding-inline: 8px; font-size: 12px; }
 }
+
+.quiz-answer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 10px 0;
+}
+.quiz-answer-meta dt { font-size: 11px; color: var(--muted); }
+.quiz-answer-meta dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
+.quiz-answer-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
