@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=4';
-import { recordingsForWork, recordingAlbums } from './local-recordings.js?v=1.6.2';
+import { recordingsForWork, recordingAlbums } from './local-recordings.js?v=1.6.3';
 import { createVisualizer } from './player-visualizer.js?v=1.6.0';
 
 function normalize(text) {

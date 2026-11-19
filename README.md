@@ -60,8 +60,6 @@ Release metadata: when publishing, increment the version in package.json/package
 
 The independent editorial entrance is `home.html`. The original site URL and `index.html` continue to open the library directly. Visual overrides are in `assets/editorial.css`; the six homepage period links use the existing library navigation through a small UI adapter. Supabase settings, persistent work IDs and backup identifiers are unchanged.
 
-The player loads user-provided MP3s from `assets/audio/medieval/` and Ogg Opus files from `assets/audio/baroque/` and `assets/audio/classical/` on demand. The Baroque recordings for BWV 1047 and HWV 351 stop at the end of the first movement and overture, respectively.
-
-Renaissance audio lives in `assets/audio/renaissance/`. The larger Romantic and 20th-century collections live on the `site-audio` branch of this repository so the Pages build stays within its size limit. `assets/local-recordings.js` pins that branch's audio commit and lists named excerpts under `parts`. The library, listening room, and blind practice all use that manifest. Favorites and discussion are keyed by the original work ID.
+All recordings live under `assets/audio/` on the `site-audio` branch of this repository. `assets/local-recordings.js` pins the audio commit and lists named excerpts under `parts`. The library, listening room, and blind practice stream the recordings on demand. Favorites and discussion are keyed by the original work ID.
 
 Explicitly selected excerpts are catalogued in `assets/work-parts.js`; complete works stay together. The review and unresolved scope questions are in `docs/multi-part-audit.md`. Generate the preferred YouTube lists with `node scripts/generate-first-choice.mjs`.

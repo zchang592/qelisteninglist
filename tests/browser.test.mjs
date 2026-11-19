@@ -12,7 +12,8 @@ import {data} from '../assets/data.js';
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const releaseVersion=JSON.parse(await readFile(resolve(root,'package.json'),'utf8')).version;
 const workIds=data.flatMap(([,composers])=>composers.flatMap(([,works])=>works.map(([id])=>id)));
-const recordingCount=workIds.reduce((total,id)=>total+recordingsForWork(id).length,0);
+const recordingUrls=new Set(workIds.flatMap(recordingsForWork).map(recording=>recording.src));
+const recordingCount=recordingUrls.size;
 const playerRowCount=workIds.reduce((total,id)=>total+Math.max(1,recordingsForWork(id).length),0);
 const firstExternalWork=workIds.find(id=>!recordingsForWork(id).length);
 const SUPABASE='skneweesbyybsuggsvyw.supabase.co';
@@ -72,6 +73,7 @@ async function app(t,{admin=false,signedIn=false,comments=[],favorites=[],favori
   await context.route('**/*',async route=>{
     const request=route.request();const url=new URL(request.url());
     if(url.origin===origin){await route.continue();return;}
+    if(recordingUrls.has(url.href))return route.fulfill({contentType:'audio/wav',body:wav(),headers:{'access-control-allow-origin':'*'}});
     if(url.hostname===SUPABASE){
       requests.push({path:url.pathname,method:request.method(),body:request.postDataJSON(),authenticated:!!request.headers().authorization});
       const json=async(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body),headers:{'access-control-allow-origin':'*'}});
@@ -378,7 +380,7 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   for(let id=1;id<=5;id++){
     const audio=page.locator(`#track-${id} audio`);
     await expect(audio).toHaveAttribute('preload','none');
-    await expect(audio).toHaveAttribute('src',new RegExp(`^\\./assets/audio/medieval/0${id}-.*\\.mp3$`));
+    await expect(audio).toHaveAttribute('src',recordingsForWork(id)[0].src);
   }
   await expect(page.locator('#track-6 audio')).toHaveAttribute('src', /006-.*\.opus$/);
   const firstAudio=page.locator('#track-1 audio');
@@ -680,9 +682,6 @@ test('blind practice mixes composers across periods and draws only from the sele
 test('separately uploaded excerpts play on their own and enter the blind pool', async t => {
   const {page,context} = await app(t);
   await context.addInitScript(() => { Math.random = () => .9999; });
-  await context.route(/\/117-[^/]+\.opus$/, route => route.fulfill({
-    contentType:'audio/wav', body:wav(), headers:{'access-control-allow-origin':'*'},
-  }));
   const parts = recordingsForWork(117);
   assert.equal(parts.length, 3);
   await page.goto(`${origin}/index.html?track=117`);

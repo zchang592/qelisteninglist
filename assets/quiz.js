@@ -1,5 +1,5 @@
 import { data } from './data.js';
-import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.2';
+import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.3';
 import { icon, mountIcons } from './icons.js?v=4';
 import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
 
