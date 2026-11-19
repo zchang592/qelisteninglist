@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=1.6.4';
-import { createMediaControls } from './media.js?v=1.6.6';
+import { createMediaControls } from './media.js?v=1.6.6.1';
 import { selectedSingleTracks, workParts } from './work-parts.js?v=1.5.7';
 
 const $=id=>document.getElementById(id);

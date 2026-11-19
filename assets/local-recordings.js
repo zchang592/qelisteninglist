@@ -1,4 +1,4 @@
-const audioArchive = 'https://raw.githubusercontent.com/zchang592/qelisteninglist/213aea6d34c2101e8bb51c2213558d9f185adbba/assets/audio';
+const audioArchive = 'https://raw.githubusercontent.com/zchang592/qelisteninglist/428480aaed7217a0ddff1bb1d0e5a93e52250373/assets/audio';
 
 // Recordings served with the site, keyed by the work IDs shared by the library and player.
 // Set album to a key in recordingAlbums. Optional quizTitle and titleAliases describe the recorded selection.
