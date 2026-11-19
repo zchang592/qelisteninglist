@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=4';
-import { localRecordings, recordingAlbums } from './local-recordings.js?v=1.6.0';
+import { localRecordings, recordingAlbums } from './local-recordings.js?v=1.6.1';
 import { createVisualizer } from './player-visualizer.js?v=1.6.0';
 
 function normalize(text) {
@@ -48,6 +48,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
   const visualizer = createVisualizer($('playerWaveform'), audio);
   const browseButtons = [...root.querySelectorAll('[data-browse]')];
   const trackRows = new Map();
+  const groupExpansion = new Map();
   const tr = (zh, en) => document.documentElement.lang === 'en' ? en : zh;
   const periodName = index => tr(periodLabels[index][1], periodLabels[index][0]);
   let view = 'all';
@@ -105,23 +106,26 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     const row = document.createElement('li');
     row.className = 'player-row';
     row.dataset.work = track.id;
-    let action;
+    const action = document.createElement(track.recording ? 'button' : 'a');
+    action.className = 'player-row-main';
+    const symbol = document.createElement('span');
+    symbol.className = 'player-row-symbol';
     if (track.recording) {
-      action = makeIconButton('play', tr('播放', 'Play'), () => {
+      action.type = 'button';
+      action.classList.add('player-row-play');
+      action.addEventListener('click', () => {
         if (track === current && loaded === track && !audio.ended) {
           if (audio.paused) playTrack(track);
           else pause();
         } else beginQueue(selection, track);
       });
-      action.classList.add('player-row-play');
     } else {
-      action = document.createElement('a');
-      action.className = 'player-icon player-external';
+      action.classList.add('player-external');
       action.href = `./index.html?track=${track.id}`;
       label(action, tr(`查看 ${track.title} 的外部录音`, `View external recordings for ${track.title}`));
-      action.append(icon('external', 16));
+      setIcon(symbol, 'external', 16);
     }
-    const identity = document.createElement('div');
+    const identity = document.createElement('span');
     identity.className = 'player-row-identity';
     const title = document.createElement('span');
     title.className = 'player-row-title';
@@ -131,21 +135,22 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     if (!track.recording) byline.push(tr('外部录音', 'External recordings'));
     meta.textContent = `${String(track.id).padStart(2, '0')} · ${byline.join(' · ')}`;
     identity.append(title, meta);
-    const actions = document.createElement('div');
-    actions.className = 'player-row-actions';
+    action.append(symbol, identity);
     if (track.recording?.duration) {
       const duration = document.createElement('span');
       duration.className = 'player-row-duration';
       duration.textContent = formatTime(track.recording.duration);
-      actions.append(duration);
+      action.append(duration);
     }
+    const actions = document.createElement('div');
+    actions.className = 'player-row-actions';
     const favorite = makeIconButton('heart', tr('收藏', 'Favorite'), () => favorites.toggle(track.id));
     favorite.dataset.playerFavorite = track.id;
     const discuss = makeIconButton('comment', tr(`讨论 ${track.title}`, `Discuss ${track.title}`), () => openComments(track.id));
     discuss.setAttribute('aria-haspopup', 'dialog');
     actions.append(favorite, discuss);
-    row.append(action, identity, actions);
-    trackRows.set(track.id, { track, row, action });
+    row.append(action, actions);
+    trackRows.set(track.id, { track, row, action, symbol });
     return row;
   }
 
@@ -183,7 +188,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
   function renderCatalog() {
     trackList.replaceChildren();
     trackRows.clear();
-    const groups = groupsInView();
+    const groups = groupsInView().filter(([, items]) => items.length);
     const visibleTracks = groups.flatMap(([, list]) => list);
     selection = visibleTracks.filter(track => track.recording);
     playSelection.disabled = !selection.length;
@@ -200,21 +205,39 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
       showEmpty(audioOnly.checked ? tr('没有符合筛选条件的站内音频。', 'No on-site recordings match these filters.') : tr('没有找到作品。', 'No matching works.'));
       return;
     }
-    for (const [heading, items] of groups) {
-      if (!items.length) continue;
-      if (heading) {
-        const title = document.createElement('h3');
-        title.className = 'player-group-title';
-        title.textContent = heading;
-        trackList.append(title);
-      }
+    for (const [index, [heading, items]] of groups.entries()) {
       const list = document.createElement('ul');
       list.className = 'player-track-list';
       for (const track of items) list.append(makeRow(track));
-      trackList.append(list);
+      if (!heading) {
+        trackList.append(list);
+        continue;
+      }
+      const key = view === 'period' ? items[0].periodIndex : heading;
+      const card = document.createElement('details');
+      card.className = 'player-group';
+      card.open = groupExpansion.get(key) ?? (index === 0);
+      const summary = document.createElement('summary');
+      const title = document.createElement('span');
+      title.className = 'player-group-title';
+      title.textContent = heading;
+      const count = document.createElement('span');
+      count.className = 'player-group-count';
+      count.textContent = tr(`${items.length} 首`, `${items.length} ${items.length === 1 ? 'work' : 'works'}`);
+      summary.append(title, count, icon('chevron', 16));
+      card.append(summary, list);
+      card.addEventListener('toggle', () => {
+        if (card.isConnected) groupExpansion.set(key, card.open);
+      });
+      trackList.append(card);
     }
     updateFavorites();
     renderRowPlayback();
+  }
+
+  function resetGroupsAndRender() {
+    groupExpansion.clear();
+    renderCatalog();
   }
 
   function configureGroupFilter(value = '') {
@@ -230,14 +253,14 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
 
   function renderRowPlayback() {
     const playing = !audio.paused && !audio.ended;
-    for (const { track, row, action } of trackRows.values()) {
+    for (const { track, row, action, symbol } of trackRows.values()) {
       const active = track === current;
       row.classList.toggle('is-current', active);
       if (active) row.setAttribute('aria-current', 'true');
       else row.removeAttribute('aria-current');
       if (track.recording) {
         const pausable = active && playing;
-        setIcon(action, pausable ? 'pause' : 'play', 17);
+        setIcon(symbol, pausable ? 'pause' : 'play', 17);
         label(action, `${pausable ? tr('暂停', 'Pause') : tr('播放', 'Play')} ${track.title}`);
       }
     }
@@ -432,11 +455,11 @@ export function buildPlayer({ data, favorites, openComments, openAuth }) {
     view = button.dataset.browse;
     for (const tab of browseButtons) tab.setAttribute('aria-pressed', String(tab === button));
     configureGroupFilter();
-    renderCatalog();
+    resetGroupsAndRender();
   });
-  search.addEventListener('input', renderCatalog);
-  group.addEventListener('change', renderCatalog);
-  audioOnly.addEventListener('change', renderCatalog);
+  search.addEventListener('input', resetGroupsAndRender);
+  group.addEventListener('change', resetGroupsAndRender);
+  audioOnly.addEventListener('change', resetGroupsAndRender);
   playSelection.addEventListener('click', () => beginQueue(selection));
   playButton.addEventListener('click', () => audio.paused || audio.ended ? playTrack(current) : pause());
   $('playerPrevious').addEventListener('click', () => {

@@ -1,6 +1,6 @@
 import { data } from './data.js';
-import { localRecordings } from './local-recordings.js?v=1.6.0';
-import { mountIcons } from './icons.js?v=4';
+import { localRecordings } from './local-recordings.js?v=1.6.1';
+import { icon, mountIcons } from './icons.js?v=4';
 import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
 
 const $ = id => document.getElementById(id);
@@ -58,10 +58,12 @@ const catalogue = data.flatMap(([, composers], period) => composers.flatMap(([co
 })));
 const pool = catalogue.filter(track => track.recording?.src);
 const creators = [...new Set(catalogue.map(track => track.composer))];
+const scopePeriods = [];
 let current;
 let mode = 'period';
 let difficulty = 'easy';
 let questionNumber = 0;
+let activePool = [];
 let remaining = [];
 let choices = [];
 let selected = '';
@@ -136,11 +138,101 @@ function checkText() {
   return gradeAnswer(textAnswer.value, { answers: current.titles, partial, otherAnswers: others.flatMap(track => track.titles) });
 }
 
+function scopeChoice(name, count) {
+  const label = document.createElement('label');
+  label.className = 'quiz-scope-choice';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = true;
+  const caption = document.createElement('span');
+  caption.className = 'quiz-scope-name';
+  caption.textContent = name;
+  const availability = document.createElement('span');
+  availability.className = 'quiz-scope-count';
+  availability.setAttribute('aria-hidden', 'true');
+  label.append(input, caption, availability);
+  return { label, input, caption, availability, count };
+}
+
+function setScopeOpen(scope, open) {
+  scope.list.hidden = !open;
+  scope.toggle.setAttribute('aria-expanded', String(open));
+  const name = periods[scope.period][language];
+  scope.toggle.setAttribute('aria-label', open ? tr(`折叠${name}作曲家`, `Collapse ${name} composers`) : tr(`展开${name}作曲家`, `Expand ${name} composers`));
+}
+
+function buildScope() {
+  for (const [period, [, composers]] of data.entries()) {
+    const card = document.createElement('div');
+    card.className = 'quiz-scope-period';
+    card.dataset.scopePeriod = period;
+    const head = document.createElement('div');
+    head.className = 'quiz-scope-head';
+    const list = document.createElement('div');
+    list.className = 'quiz-scope-composers';
+    list.id = `quizScopeComposers-${period}`;
+    const choices = new Map();
+    let count = 0;
+    for (const [composer, works] of composers) {
+      const choice = scopeChoice(composer, works.filter(([id]) => localRecordings[id]?.src).length);
+      count += choice.count;
+      choices.set(composer, choice);
+      list.append(choice.label);
+    }
+    const parent = scopeChoice(periods[period][language], count);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'quiz-scope-toggle';
+    toggle.setAttribute('aria-controls', list.id);
+    toggle.append(icon('chevron', 16));
+    const scope = { period, parent, choices, list, toggle };
+    parent.input.addEventListener('change', () => {
+      for (const choice of choices.values()) choice.input.checked = parent.input.checked;
+      if (parent.input.checked) setScopeOpen(scope, true);
+    });
+    toggle.addEventListener('click', () => setScopeOpen(scope, list.hidden));
+    setScopeOpen(scope, period === 0);
+    head.append(parent.label, toggle);
+    card.append(head, list);
+    $('quizScopeList').append(card);
+    scopePeriods.push(scope);
+  }
+}
+
+function selectedRecordings() {
+  return pool.filter(track => scopePeriods[track.period].choices.get(track.composer).input.checked);
+}
+
+function renderScope() {
+  for (const scope of scopePeriods) {
+    const { parent, choices } = scope;
+    const checked = [...choices.values()].filter(choice => choice.input.checked).length;
+    parent.input.checked = choices.size > 0 && checked === choices.size;
+    parent.input.indeterminate = checked > 0 && checked < choices.size;
+    parent.caption.textContent = periods[scope.period][language];
+    for (const { availability, count } of [parent, ...choices.values()]) {
+      availability.textContent = count ? tr(`${count} 段录音`, `${count} ${count === 1 ? 'recording' : 'recordings'}`) : tr('暂无录音', 'No audio');
+    }
+    setScopeOpen(scope, !scope.list.hidden);
+  }
+  const count = selectedRecordings().length;
+  const status = count ? tr(`所选范围有 ${count} 段可抽取的录音`, `${count} ${count === 1 ? 'recording' : 'recordings'} in scope`) : tr('请勾选包含站内录音的范围。', 'Select a scope that contains on-site recordings.');
+  if ($('quizScopeStatus').textContent !== status) $('quizScopeStatus').textContent = status;
+  $('quizStart').disabled = !count;
+}
+
+function setScopeSelection(checked) {
+  for (const { choices } of scopePeriods) {
+    for (const { input } of choices.values()) input.checked = checked;
+  }
+  renderScope();
+}
+
 function renderSettings() {
   const selected = new FormData(setupForm);
   $('quizDifficulty').hidden = selected.get('mode') === 'period';
   $('quizThresholds').hidden = $('quizDifficulty').hidden || selected.get('difficulty') !== 'hard';
-  $('quizStart').disabled = !pool.length;
+  renderScope();
   $('quizPoolCount').textContent = pool.length
     ? tr(`题库有 ${pool.length} 段站内录音，新增录音会自动加入。`, `${pool.length} on-site recordings are available. New recordings are added to the practice pool as they arrive.`)
     : tr('题库会在站内录音加入后开放。', 'Practice opens when recordings are added.');
@@ -206,7 +298,7 @@ function renderQuestion() {
 
 function nextQuestion() {
   if (!remaining.length) {
-    remaining = shuffled(pool);
+    remaining = shuffled(activePool);
     if (remaining.length > 1 && remaining[0] === current) [remaining[0], remaining[1]] = [remaining[1], remaining[0]];
   }
   current = remaining.shift();
@@ -248,9 +340,12 @@ function applyTheme() {
 }
 
 setupForm.addEventListener('change', renderSettings);
+$('quizScopeAll').addEventListener('click', () => setScopeSelection(true));
+$('quizScopeClear').addEventListener('click', () => setScopeSelection(false));
 setupForm.addEventListener('submit', event => {
   event.preventDefault();
-  if (!pool.length) return;
+  activePool = selectedRecordings();
+  if (!activePool.length) return;
   const values = new FormData(setupForm);
   mode = values.get('mode');
   difficulty = mode === 'period' ? 'easy' : values.get('difficulty');
@@ -309,6 +404,7 @@ $('quizTheme').addEventListener('click', () => {
   applyTheme();
 });
 
+buildScope();
 mountIcons();
 applyLanguage();
 applyTheme();

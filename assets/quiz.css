@@ -99,6 +99,45 @@ html[data-theme=dark] .quiz-page {
 .quiz-primary:hover { background: var(--quiz-accent); filter: brightness(1.1); }
 .quiz-primary:disabled { opacity: .55; cursor: default; }
 
+.quiz-scope-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 9px; }
+#quizScopeStatus { margin: 0; color: var(--muted); font-size: 12px; }
+.quiz-scope-actions { display: flex; gap: 6px; }
+.quiz-scope-list { display: grid; gap: 7px; }
+.quiz-scope-period { border: 1px solid var(--stroke); border-radius: 8px; }
+.quiz-scope-head { display: grid; grid-template-columns: minmax(0, 1fr) 44px; }
+.quiz-scope-choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 11px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.quiz-scope-head .quiz-scope-choice { border-radius: 7px 0 0 7px; font-weight: 650; }
+.quiz-scope-choice:hover, .quiz-scope-toggle:hover { background: var(--green-soft); }
+.quiz-scope-choice input { flex-shrink: 0; width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
+.quiz-scope-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.quiz-scope-count { color: var(--muted); white-space: nowrap; font-size: 11px; font-weight: 400; }
+.quiz-scope-toggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--stroke);
+  border-radius: 0 7px 7px 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.quiz-scope-toggle[aria-expanded=true] svg { transform: rotate(90deg); }
+.quiz-scope-composers { display: grid; padding: 2px 5px 3px 16px; border-top: 1px solid var(--stroke); }
+.quiz-scope-composers .quiz-scope-choice { border-radius: 5px; }
+.quiz-scope-composers .quiz-scope-choice + .quiz-scope-choice { border-top: 1px solid var(--stroke); }
+
 .quiz-round-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
 #quizQuestionNumber { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .quiz-round-card { overflow: hidden; }
@@ -140,4 +179,6 @@ html[data-theme=dark] .quiz-page {
   .quiz-brand .qe-seal span { font-size: 21px; }
   .quiz-option { gap: 7px; padding-inline: 7px; font-size: 12px; }
   .quiz-options { grid-template-columns: minmax(0, 1fr); }
+  .quiz-scope-composers { padding-left: 8px; }
+  .quiz-scope-choice { gap: 7px; padding-inline: 8px; font-size: 12px; }
 }

@@ -8,8 +8,8 @@
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./assets/style.css?v=1.5.7">
   <link rel="stylesheet" href="./assets/editorial.css?v=1.5.7">
-  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.0">
-  <script type="module" src="./assets/quiz.js?v=1.6.0"></script>
+  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.1">
+  <script type="module" src="./assets/quiz.js?v=1.6.1"></script>
 </head>
 <body class="quiz-page">
   <a class="skip-link" href="#quizMain" data-zh="跳到练习" data-en="Skip to practice">跳到练习</a>
@@ -44,6 +44,17 @@
           </div>
         </fieldset>
         <p class="quiz-hint" id="quizThresholds" hidden data-zh="文字答案的相似度达到 80% 判为正确，60% 至 79% 判为不够准确。选段或作品编号有误时会单独提示。" data-en="Text answers need 80% similarity to pass. Scores from 60% to 79% are marked close. Incorrect selections or catalogue numbers are flagged separately.">文字答案的相似度达到 80% 判为正确，60% 至 79% 判为不够准确。选段或作品编号有误时会单独提示。</p>
+        <fieldset class="quiz-scope">
+          <legend data-zh="考试范围" data-en="Practice scope">考试范围</legend>
+          <div class="quiz-scope-toolbar">
+            <p id="quizScopeStatus" role="status"></p>
+            <div class="quiz-scope-actions">
+              <button type="button" class="quiz-button" id="quizScopeAll" data-zh="全选" data-en="Select all">全选</button>
+              <button type="button" class="quiz-button" id="quizScopeClear" data-zh="清空" data-en="Clear">清空</button>
+            </div>
+          </div>
+          <div class="quiz-scope-list" id="quizScopeList"></div>
+        </fieldset>
         <button type="submit" class="quiz-button quiz-primary" id="quizStart"><span data-zh="开始练习" data-en="Start practice">开始练习</span><span data-icon="arrow"></span></button>
       </form>
     </section>

@@ -6,8 +6,10 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
 import {chromium,expect} from 'playwright/test';
+import {localRecordings} from '../assets/local-recordings.js';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const recordingCount=Object.values(localRecordings).filter(recording=>recording.src).length;
 const SUPABASE='skneweesbyybsuggsvyw.supabase.co';
 const USER={id:'11111111-1111-4111-8111-111111111111',user_metadata:{display_name:'Test listener'}};
 const session={access_token:'test-access-token',refresh_token:'test-refresh-token',expires_in:3600,user:USER};
@@ -18,10 +20,10 @@ before(async()=>{
     if(path!==root && !path.startsWith(root+sep)){res.writeHead(403).end();return;}
     try {
       const file=path===root?resolve(root,'index.html'):path;
-      const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf','.mp3':'audio/mpeg'}[extname(file)]||'application/octet-stream';
+      const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.ttf':'font/ttf','.mp3':'audio/mpeg','.opus':'audio/ogg'}[extname(file)]||'application/octet-stream';
       const bytes=await readFile(file);
       const headers={'Content-Type':mime,'Content-Length':bytes.length};
-      const range=mime==='audio/mpeg' && /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+      const range=mime.startsWith('audio/') && /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
       if(range) {
         const start=Number(range[1]);
         const end=range[2] ? Math.min(Number(range[2]),bytes.length-1) : bytes.length-1;
@@ -389,6 +391,11 @@ test('works provide YouTube recordings and NetEase search with collapsible playe
   await expect.poll(()=>firstAudio.evaluate(audio=>audio.paused)).toBe(true);
   await page.locator('#track-2 .version-preview').first().click();
   await expect.poll(()=>page.locator('#track-2 audio').evaluate(audio=>audio.paused)).toBe(true);
+  await page.getByRole('button', {name:'Baroque 巴洛克，29 首作品', exact:true}).click();
+  const opus = page.locator('#track-12 audio');
+  await expect(opus).toHaveAttribute('src', /012-monteverdi-orfeo-overture\.opus$/);
+  await opus.evaluate(audio=>audio.play());
+  await expect.poll(()=>opus.evaluate(audio=>audio.currentTime)).toBeGreaterThan(0);
 });
 test('the listening room browses the full catalogue and plays only available audio', async t => {
   const {page} = await app(t);
@@ -399,25 +406,46 @@ test('the listening room browses the full catalogue and plays only available aud
   await expect(page.locator('#playerAlbum')).toBeHidden();
   await page.getByRole('button', {name:'按时期', exact:true}).click();
   await expect(page.locator('.player-group-title')).toHaveCount(6);
+  const groups = page.locator('.player-group');
+  await expect(groups.first()).toHaveAttribute('open', '');
+  await expect(page.locator('.player-group[open]')).toHaveCount(1);
+  const baroque = groups.nth(2);
+  await expect(baroque.locator('.player-row[data-work="12"]')).toBeHidden();
+  await baroque.locator('summary').click();
+  await expect(baroque.locator('.player-row[data-work="12"]')).toBeVisible();
+  await baroque.locator('summary').click();
+  await expect(baroque.locator('.player-row[data-work="12"]')).toBeHidden();
   await page.locator('#playerGroup').selectOption('2');
   await expect(page.locator('.player-row')).toHaveCount(29);
+  await page.locator('.player-row[data-work="12"] .player-row-title').click();
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /012-monteverdi-orfeo-overture\.opus$/);
+  await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
+  await page.locator('#playerGroup').selectOption('3');
+  await expect(page.locator('.player-row')).toHaveCount(40);
+  await page.locator('.player-row[data-work="43"] .player-row-title').click();
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /043-stamitz-viola-concerto-op1-1-i\.opus$/);
+  await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
+  await page.locator('#playerGroup').selectOption('1');
   await expect(page.locator('#playSelection')).toBeDisabled();
-  await page.locator('.player-row[data-work="12"] .player-external').click();
+  await page.locator('.player-row[data-work="6"] .player-external').click();
   await expect(page.locator('.track:visible')).toHaveCount(1);
-  await expect(page.locator('#track-12')).toBeVisible();
+  await expect(page.locator('#track-6')).toBeVisible();
   await page.getByRole('link', {name:'打开聆听室', exact:true}).click();
   await page.getByRole('button', {name:'按作曲家', exact:true}).click();
+  await expect(groups.first()).toHaveAttribute('open', '');
+  await expect(page.locator('.player-group[open]')).toHaveCount(1);
   await page.locator('#playerGroup').selectOption('Guillaume de Machaut');
   await expect(page.locator('.player-row')).toHaveCount(1);
-  await page.locator('#playSelection').click();
+  const track = page.locator('.player-row[data-work="5"]');
+  await track.locator('.player-row-title').click();
   await expect(page.locator('#playerAudio')).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
   await expect(page.locator('#playerSeek')).toBeEnabled();
   await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
-  await page.locator('#playerPlay').click();
+  await track.locator('.player-row-identity small').click();
   await expect(page.locator('#playerPlay')).toHaveAttribute('aria-label', '播放');
   await page.getByRole('button', {name:'全部曲目', exact:true}).click();
   await page.locator('#playerAudioOnly').check();
-  await expect(page.locator('.player-row')).toHaveCount(5);
+  await expect(page.locator('.player-row')).toHaveCount(recordingCount);
 });
 
 test('the listening room advances, loops and shuffles the playable queue', async t => {
@@ -425,6 +453,8 @@ test('the listening room advances, loops and shuffles the playable queue', async
   await page.goto(`${origin}/index.html?view=player`);
   const audio = page.locator('#playerAudio');
   const repeat = page.locator('#playerRepeat');
+  await page.getByRole('button', {name:'按时期', exact:true}).click();
+  await page.locator('#playerGroup').selectOption('0');
   await page.locator('#playSelection').click();
   await expect(page.locator('#playerSeek')).toBeEnabled();
   await repeat.click();
@@ -461,13 +491,15 @@ test('the listening room shares favorites and discussions with the library on mo
   await page.setViewportSize({width:320,height:740});
   await expect(page.locator('#modeLabel')).toHaveText('已登录');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  await page.locator('#playerFavorite').click();
+  const track = page.locator('.player-row[data-work="1"]');
+  await track.locator('[data-player-favorite]').click();
   await expect(page.locator('#playerFavorite')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#playerAudio')).not.toHaveAttribute('src', /.+/);
   assert.equal(state.favorites.has(1), true);
   await page.getByRole('button', {name:'我的收藏', exact:true}).click();
   await expect(page.locator('.player-row')).toHaveCount(2);
   await page.locator('#playerPlay').click();
-  await page.locator('#playerDiscuss').click();
+  await track.locator('[aria-haspopup="dialog"]').click();
   await expect(page.locator('#commentsDescription')).toContainText('01 /');
   await page.locator('#commentBody').fill('A note from the listening room.');
   await page.locator('#postComment').click();
@@ -505,7 +537,7 @@ test('blind period practice plays one recording and reveals its title only after
   await context.addInitScript(() => { Math.random = () => .9999; });
   await page.getByRole('link', {name:'盲听测试', exact:true}).click();
   await page.setViewportSize({width:320,height:760});
-  await expect(page.locator('#quizPoolCount')).toContainText('5 段');
+  await expect(page.locator('#quizPoolCount')).toContainText(`${recordingCount} 段`);
   await expect(page.locator('#quizDifficulty')).toBeHidden();
   await page.locator('#quizStart').click();
   await expect(page.getByRole('heading')).toHaveCount(0);
@@ -531,10 +563,10 @@ test('blind period practice plays one recording and reveals its title only after
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   const source = await readFile(resolve(root, 'assets/local-recordings.js'), 'utf8');
   await context.route('**/assets/local-recordings.js?*', route => route.fulfill({
-    contentType:'text/javascript', body:source+'\nlocalRecordings[12] = {src:localRecordings[1].src};',
+    contentType:'text/javascript', body:source+'\nlocalRecordings[6] = {src:localRecordings[1].src};',
   }));
   await page.reload();
-  await expect(page.locator('#quizPoolCount')).toContainText('6 on-site recordings');
+  await expect(page.locator('#quizPoolCount')).toContainText(`${recordingCount+1} on-site recordings`);
 });
 
 test('blind composer and title practice support four choices and fuzzy text answers', async t => {
@@ -571,6 +603,71 @@ test('blind composer and title practice support four choices and fuzzy text answ
   await page.locator('#quizSubmit').click();
   await expect(page.locator('#quizVerdict')).toHaveText('正确');
   await expect(page.locator('#quizSimilarity')).toHaveText(/相似度 9\d%/);
+});
+
+test('blind practice mixes composers across periods and draws only from the selected range', async t => {
+  const {page,context} = await app(t);
+  await context.addInitScript(() => { Math.random = () => .9999; });
+  await page.goto(`${origin}/quiz.html`);
+  await page.setViewportSize({width:320,height:760});
+  const start = page.locator('#quizStart');
+  const period = index => page.locator(`.quiz-scope-period[data-scope-period="${index}"]`);
+  const medieval = period(0).getByRole('checkbox', {name:'中世纪', exact:true});
+  const baroque = period(2).getByRole('checkbox', {name:'巴洛克', exact:true});
+  const classical = period(3).getByRole('checkbox', {name:'古典主义', exact:true});
+  const chant = period(0).getByRole('checkbox', {name:'Gregorian chant', exact:true});
+  const polyphony = period(0).getByRole('checkbox', {name:'Medieval 6-part polyphony', exact:true});
+  const machaut = period(0).getByRole('checkbox', {name:'Guillaume de Machaut', exact:true});
+  await expect(page.locator('#quizScopeStatus')).toContainText(`${recordingCount} 段`);
+  await page.locator('#quizScopeClear').click();
+  await expect(start).toBeDisabled();
+  const renaissance = period(1).getByRole('checkbox', {name:'文艺复兴', exact:true});
+  await renaissance.check();
+  await expect(start).toBeDisabled();
+  await renaissance.uncheck();
+  await medieval.check();
+  await expect(chant).toBeChecked();
+  await expect(polyphony).toBeChecked();
+  await expect(machaut).toBeChecked();
+  await chant.uncheck();
+  await expect(medieval).toHaveJSProperty('indeterminate', true);
+  await medieval.check();
+  await expect(medieval).toHaveJSProperty('indeterminate', false);
+  await expect(chant).toBeChecked();
+  await chant.uncheck();
+  await polyphony.uncheck();
+
+  await period(2).getByRole('button', {name:'展开巴洛克作曲家'}).click();
+  await period(2).getByRole('checkbox', {name:'Claudio Monteverdi', exact:true}).check();
+  await expect(baroque).toHaveJSProperty('indeterminate', true);
+  await expect(medieval).toHaveJSProperty('indeterminate', true);
+  await period(3).getByRole('button', {name:'展开古典主义作曲家'}).click();
+  await period(3).getByRole('checkbox', {name:'Carl Stamitz', exact:true}).check();
+  await expect(classical).toHaveJSProperty('indeterminate', true);
+  await expect(page.locator('#quizScopeStatus')).toContainText('3 段');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+
+  const audio = page.locator('#quizAudio');
+  await start.click();
+  const selected = [
+    [/05-machaut-kyrie\.mp3$/, '中世纪'],
+    [/012-monteverdi-orfeo-overture\.opus$/, '巴洛克'],
+    [/043-stamitz-viola-concerto-op1-1-i\.opus$/, '古典主义'],
+  ];
+  for (const [path, answer] of selected) {
+    await expect(audio).toHaveAttribute('src', path);
+    await audio.evaluate(element => element.play());
+    await expect.poll(() => audio.evaluate(element => element.currentTime)).toBeGreaterThan(0);
+    await page.getByRole('radio', {name:answer, exact:true}).check();
+    await page.locator('#quizSubmit').click();
+    await expect(page.locator('#quizVerdict')).toHaveText('正确');
+    await page.locator('#quizNext').click();
+  }
+  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await page.locator('#quizSettings').click();
+  await expect(page.locator('#quizScopeStatus')).toContainText('3 段');
+  await page.locator('#quizScopeAll').click();
+  await expect(page.locator('#quizScopeStatus')).toContainText(`${recordingCount} 段`);
 });
 
 test('multi-part works show distinct selections, verified videos, searches, and scope warnings',async t=>{
@@ -652,7 +749,7 @@ test('hover account menu changes the avatar and nickname, persisting across a re
   await expect(page.locator('#topAvatar svg')).toHaveAttribute('data-avatar','note-03');
   await page.locator('#avatarTrigger').hover();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
   await expect(page.locator('#profileSettings')).toHaveCSS('border-top-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.avatar-option')).toHaveCount(10);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).click();
@@ -679,13 +776,13 @@ test('account menu works on a narrow screen with touch-sized controls and keyboa
   await page.setViewportSize({width:320,height:700});
   await page.locator('#avatarTrigger').click();
   await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
   const rect=await page.locator('#avatarPopover').boundingBox();assert.ok(rect.x>=0 && rect.x+rect.width<=320);
   await page.getByRole('button',{name:'选择薄荷音符头像'}).focus();
   await page.keyboard.press('Escape');await expect(page.locator('#avatarPopover')).toBeHidden();
   await expect(page.locator('#avatarTrigger')).toBeFocused();
   await page.keyboard.press('Enter');await expect(page.locator('#avatarPopover')).toBeVisible();
-  await expect(page.locator('.release-info')).toContainText('v1.6.0 · 更新于');
+  await expect(page.locator('.release-info')).toContainText('v1.6.1 · 更新于');
 });
 test('threaded discussions keep replies under their root and can reply to an individual reply',async t=>{
   const root='aaaaaaaa-aaaa-4aaa-8aaa-000000000001';

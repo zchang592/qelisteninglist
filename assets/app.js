@@ -1,7 +1,7 @@
 import { data } from './data.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SITE_URL } from './config.js';
-import { buildLibrary } from './library.js?v=1.6.0';
-import { buildPlayer } from './player.js?v=1.6.0';
+import { buildLibrary } from './library.js?v=1.6.1';
+import { buildPlayer } from './player.js?v=1.6.1';
 import { createAdminController } from './admin.js';
 import { createMessagesController } from './messages.js?v=1.5.0';
 import { createPresentation } from './presentation.js?v=1.6.0';

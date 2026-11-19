@@ -54,12 +54,12 @@ Push static files to `main`. In GitHub **Settings → Pages**, select **Deploy f
 
 The redesign follows [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)'s `design-taste-frontend` guidance for typography, spacing, restrained motion, real platform icons, keyboard access, and browser verification. This is a working catalog app: period navigation and readable work rows take precedence over the skill's company-landing-page sections and full-screen effects.
 
-Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners. The five Medieval MP3 files are hosted in this repository.
+Plus Jakarta Sans is distributed under the SIL Open Font License; its license is in `assets/fonts/`. Platform SVGs come from [Simple Icons](https://github.com/simple-icons/simple-icons), under CC0. Product names and logos belong to their respective owners.
 
 Release metadata: when publishing, increment the version in package.json/package-lock.json and the account menu in index.html, update its UTC timestamp, and refresh changed module/cache query versions.
 
 The independent editorial entrance is `home.html`. The original site URL and `index.html` continue to open the library directly. Visual overrides are in `assets/editorial.css`; the six homepage period links use the existing library navigation through a small UI adapter. Supabase settings, persistent work IDs and backup identifiers are unchanged.
 
-The five Medieval works also include user-provided MP3 recordings in `assets/audio/medieval/`. The player loads audio on demand. Recording identification and source links match the first YouTube versions listed in `assets/media.js`.
+The player loads user-provided MP3s from `assets/audio/medieval/` and Ogg Opus files from `assets/audio/baroque/` and `assets/audio/classical/` on demand. The Baroque recordings for BWV 1047 and HWV 351 stop at the end of the first movement and overture, respectively.
 
 Explicitly selected excerpts are catalogued in `assets/work-parts.js`; complete works stay together. The review and unresolved scope questions are in `docs/multi-part-audit.md`. Generate the preferred YouTube lists with `node scripts/generate-first-choice.mjs`.
