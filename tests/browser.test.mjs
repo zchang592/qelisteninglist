@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
 import {chromium,expect} from 'playwright/test';
-import {recordingsForWork} from '../assets/local-recordings.js';
+import {playbackUnitsForWork, recordingsForWork} from '../assets/local-recordings.js';
 import {data} from '../assets/data.js';
 import {workBackgrounds} from '../assets/work-backgrounds.js';
 
@@ -14,8 +14,8 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const releaseVersion=JSON.parse(await readFile(resolve(root,'package.json'),'utf8')).version;
 const workIds=data.flatMap(([,composers])=>composers.flatMap(([,works])=>works.map(([id])=>id)));
 const recordingUrls=new Set(workIds.flatMap(recordingsForWork).map(recording=>recording.src));
-const recordingCount=recordingUrls.size;
-const playerRowCount=workIds.reduce((total,id)=>total+Math.max(1,recordingsForWork(id).length),0);
+const recordingCount=workIds.flatMap(playbackUnitsForWork).length;
+const playerRowCount=workIds.reduce((total,id)=>total+Math.max(1,playbackUnitsForWork(id).length),0);
 const firstExternalWork=workIds.find(id=>!recordingsForWork(id).length);
 const SUPABASE='skneweesbyybsuggsvyw.supabase.co';
 const USER={id:'11111111-1111-4111-8111-111111111111',user_metadata:{display_name:'Test listener'}};
@@ -440,7 +440,7 @@ test('work backgrounds cover the catalogue and follow the page language and disc
 });
 
 test('the library card plays from its surface and separate actions leave playback alone', async t => {
-  const {page} = await app(t);
+  const {page,context} = await app(t);
   const track=page.locator('#track-1');
   const audio=track.locator('audio');
   await track.locator('.track-index').click();
@@ -451,7 +451,11 @@ test('the library card plays from its surface and separate actions leave playbac
   await expect(page.locator('#reportGuest')).toBeVisible();
   await expect.poll(() => audio.evaluate(element => element.paused)).toBe(true);
   await page.locator('#closeWorkReport').click();
-  await page.locator('#trackSearch').fill('104');
+  const manifest=await readFile(resolve(root,'assets/local-recordings.js'),'utf8');
+  await context.route('**/assets/local-recordings.js?*',route=>route.fulfill({
+    contentType:'text/javascript',body:manifest+'\ndelete localRecordings[104];',
+  }));
+  await page.goto(`${origin}/index.html?track=104`);
   await page.locator('#track-104 .track-index').click();
   await expect(page.locator('#track-104 .youtube-embed')).toHaveAttribute('src',/autoplay=1/);
 });
@@ -520,7 +524,7 @@ test('the listening room browses the full catalogue and plays only available aud
   await expect(page.locator('.player-row')).toHaveCount(1);
   const track = page.locator('.player-row[data-work="5"]');
   await track.locator('.player-row-title').click();
-  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await expect(page.locator('#playerAudio')).toHaveAttribute('src', /05-machaut-kyrie\.opus$/);
   await expect(page.locator('#playerSeek')).toBeEnabled();
   await expect.poll(() => page.locator('#playerAudio').evaluate(audio => audio.currentTime)).toBeGreaterThan(0);
   await track.locator('.player-row-identity small').click();
@@ -544,7 +548,7 @@ test('the listening room advances, loops and shuffles the playable queue', async
   await page.locator('#playerShowQueue').click();
   await expect(page.locator('#playerQueueList button')).toHaveCount(5);
   await page.locator('#playerQueueList button').last().click();
-  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.opus$/);
   await expect.poll(() => audio.evaluate(element => Number.isFinite(element.duration) && !element.paused)).toBe(true);
   await audio.evaluate(element => { element.currentTime = element.duration - .12; });
   await expect(audio).toHaveAttribute('src', /01-missa-de-angelis-kyrie\.mp3$/);
@@ -738,7 +742,7 @@ test('blind practice mixes composers across periods and draws only from the sele
   const audio = page.locator('#quizAudio');
   await start.click();
   const selected = [
-    [/05-machaut-kyrie\.mp3$/, '中世纪'],
+    [/05-machaut-kyrie\.opus$/, '中世纪'],
     [/012-monteverdi-orfeo-overture\.opus$/, '巴洛克'],
     [/043-stamitz-viola-concerto-op1-1-i\.opus$/, '古典主义'],
   ];
@@ -751,7 +755,7 @@ test('blind practice mixes composers across periods and draws only from the sele
     await expect(page.locator('#quizVerdict')).toHaveText('正确');
     await page.locator('#quizNext').click();
   }
-  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.mp3$/);
+  await expect(audio).toHaveAttribute('src', /05-machaut-kyrie\.opus$/);
   await page.locator('#quizSettings').click();
   await expect(page.locator('#quizScopeStatus')).toContainText('3 段');
   await page.locator('#quizScopeAll').click();
@@ -793,6 +797,90 @@ test('separately uploaded excerpts play on their own and enter the blind pool', 
     await expect(page.locator('#quizWork')).toContainText(part.name);
     await page.locator('#quizNext').click();
   }
+});
+
+test('complete works keep their parts in order and Peter Grimes opens at Act I', async t => {
+  const {page} = await app(t);
+  const endPart = async audio => {
+    await expect.poll(() => audio.evaluate(element => !element.paused && element.currentTime > 0)).toBe(true);
+    await audio.evaluate(element => {
+      element.pause();
+      element.dispatchEvent(new Event('ended'));
+    });
+  };
+  assert.deepEqual([104,106,107,108,141].map(id=>recordingsForWork(id).length),[4,5,5,6,4]);
+
+  await page.goto(`${origin}/index.html?track=141`);
+  const opera = page.locator('#track-141');
+  const libraryAudio = opera.locator('audio');
+  await expect(libraryAudio).toHaveAttribute('src', /141-02\.opus$/);
+  await opera.locator('.track-index').click();
+  await endPart(libraryAudio);
+  await expect(libraryAudio).toHaveAttribute('src', /141-03\.opus$/);
+  await opera.getByRole('button',{name:'从序幕播放全剧'}).click();
+  await expect(libraryAudio).toHaveAttribute('src', /141-01\.opus$/);
+  await opera.locator('.local-sequence-controls select').selectOption('3');
+  await expect(libraryAudio).toHaveAttribute('src', /141-04\.opus$/);
+  await endPart(libraryAudio);
+  await expect(libraryAudio).toHaveAttribute('src', /141-02\.opus$/);
+  await expect.poll(() => libraryAudio.evaluate(element => element.paused)).toBe(true);
+
+  await page.goto(`${origin}/index.html?view=player`);
+  await page.locator('#playerSearch').fill('104');
+  const rows = page.locator('.player-row[data-work="104"]');
+  await expect(rows).toHaveCount(1);
+  await rows.locator('.player-row-title').click();
+  const playerAudio = page.locator('#playerAudio');
+  await expect(playerAudio).toHaveAttribute('src', /104-01\.opus$/);
+  await expect(page.locator('#playerShuffle')).toBeDisabled();
+  await endPart(playerAudio);
+  await expect(playerAudio).toHaveAttribute('src', /104-02\.opus$/);
+  await expect(page.locator('#playerPart')).toHaveValue('1');
+  await page.locator('#playerPart').selectOption('3');
+  await expect(playerAudio).toHaveAttribute('src', /104-04\.opus$/);
+  await endPart(playerAudio);
+  await expect.poll(() => playerAudio.evaluate(element => element.paused)).toBe(true);
+  await expect(playerAudio).toHaveAttribute('src', /104-04\.opus$/);
+
+  await page.locator('#playerSearch').fill('Mahler');
+  await page.locator('.player-row[data-work="106"] .player-row-title').click();
+  await page.locator('#playerShuffle').click();
+  await expect(playerAudio).toHaveAttribute('src', /106-01\.opus$/);
+  await endPart(playerAudio);
+  await expect(playerAudio).toHaveAttribute('src', /106-02\.opus$/);
+  await page.locator('#playerPart').selectOption('4');
+  await expect(playerAudio).toHaveAttribute('src', /106-05\.opus$/);
+  await endPart(playerAudio);
+  await expect(playerAudio).not.toHaveAttribute('src', /106-\d\d\.opus$/);
+
+  await page.goto(`${origin}/quiz.html`);
+  await page.locator('#quizScopeClear').click();
+  await page.getByRole('button',{name:'展开浪漫主义作曲家'}).click();
+  const bruckner = page.getByRole('checkbox',{name:'Bruckner',exact:true});
+  await bruckner.check();
+  await expect(page.locator('#quizScopeStatus')).toContainText('1 段');
+  await page.locator('#quizStart').click();
+  const quizAudio = page.locator('#quizAudio');
+  await expect(quizAudio).toHaveAttribute('src', /104-01\.opus$/);
+  await quizAudio.evaluate(element => element.play());
+  await endPart(quizAudio);
+  await expect(quizAudio).toHaveAttribute('src', /104-02\.opus$/);
+  await expect(page.locator('#quizPartControl')).toBeHidden();
+  await page.getByRole('radio',{name:'浪漫主义',exact:true}).check();
+  await page.locator('#quizSubmit').click();
+  await expect(page.locator('#quizPart')).toHaveValue('1');
+  await page.locator('#quizPart').selectOption('2');
+  await expect(quizAudio).toHaveAttribute('src', /104-03\.opus$/);
+  await page.locator('#quizSettings').click();
+  await bruckner.uncheck();
+  await page.getByRole('button',{name:'展开二十世纪作曲家'}).click();
+  await page.getByRole('checkbox',{name:'Britten',exact:true}).check();
+  await page.locator('#quizStart').click();
+  await expect(quizAudio).toHaveAttribute('src', /141-02\.opus$/);
+  await quizAudio.evaluate(element => element.play());
+  await endPart(quizAudio);
+  await expect.poll(() => quizAudio.evaluate(element => element.paused)).toBe(true);
+  await expect(quizAudio).toHaveAttribute('src', /141-02\.opus$/);
 });
 
 test('multi-part works show distinct selections, verified videos, searches, and scope warnings',async t=>{

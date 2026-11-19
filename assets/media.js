@@ -2,7 +2,7 @@ import { earlyRecordings } from './early-recordings.js?v=1.5.7';
 import { laterRecordings } from './later-recordings.js?v=1.5.7';
 import { icon } from './icons.js?v=3';
 import { workParts, scopeNotes } from './work-parts.js?v=1.5.7';
-import { recordingsForWork } from './local-recordings.js?v=1.6.3';
+import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.5';
 
 // Only the Medieval pilot has a recording lookup. Add another numbered entry to extend it.
 // Recording URLs are obtained from the provider, never guessed from a work's title.
@@ -117,6 +117,47 @@ function recordingPlayer(recording, fullText) {
   return player;
 }
 
+function sequencePlayer(work, fullText) {
+  const { sequence, selectedPart = 0 } = work;
+  const player = recordingPlayer({ src: sequence[selectedPart].src }, fullText);
+  const audio = player.querySelector('audio');
+  const controls = document.createElement('div');
+  controls.className = 'local-sequence-controls';
+  const label = document.createElement('label');
+  label.textContent = '乐章 / 幕';
+  const select = document.createElement('select');
+  select.append(...sequence.map((part, index) => new Option(part.name, index)));
+  label.append(select);
+  controls.append(label);
+  let current = selectedPart;
+  function showPart(index) {
+    current = index;
+    select.value = String(index);
+    audio.setAttribute('aria-label', `${fullText} · ${sequence[index].name}`);
+  }
+  function changePart(index, play) {
+    showPart(index);
+    audio.src = sequence[index].src;
+    if (play) audio.play().catch(() => {});
+  }
+  showPart(selectedPart);
+  select.addEventListener('change', () => changePart(Number(select.value), true));
+  audio.addEventListener('ended', () => {
+    if (sequence[current + 1]) changePart(current + 1, true);
+    else changePart(selectedPart, false);
+  });
+  if (selectedPart) {
+    const complete = document.createElement('button');
+    complete.type = 'button';
+    complete.className = 'text-button';
+    complete.textContent = '从序幕播放全剧';
+    complete.addEventListener('click', () => changePart(0, true));
+    controls.append(complete);
+  }
+  audio.before(controls);
+  return player;
+}
+
 function platformLink(name, url, logo) {
   const link = document.createElement('a');
   link.href = url;
@@ -146,8 +187,10 @@ export function createMediaControls(id, fullText) {
   summary.append(icon('headphones',15),summaryTitle,icon('chevron',14));
   const contents=document.createElement('div');contents.className='recording-versions-content';
   const sources = recordingsForWork(id);
-  if (sources.length === 1) block.append(recordingPlayer(sources[0], fullText));
-  if (sources.length > 1) {
+  const work = localRecordings[id];
+  if (work?.sequence) block.append(sequencePlayer(work, fullText));
+  else if (sources.length === 1) block.append(recordingPlayer(sources[0], fullText));
+  else if (sources.length > 1) {
     const playlist = document.createElement('details');
     playlist.className = 'local-recording local-recording-parts';
     playlist.open = true;

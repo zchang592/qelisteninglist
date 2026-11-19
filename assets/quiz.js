@@ -1,5 +1,5 @@
 import { data } from './data.js';
-import { localRecordings, recordingsForWork } from './local-recordings.js?v=1.6.3';
+import { localRecordings, playbackUnitsForWork } from './local-recordings.js?v=1.6.5';
 import { icon, mountIcons } from './icons.js?v=4';
 import { gradeAnswer, normalizeAnswer } from './quiz-scoring.js?v=1.6.0';
 import { workBackgrounds } from './work-backgrounds.js?v=1.6.4';
@@ -57,7 +57,9 @@ const catalogue = data.flatMap(([, composers], period) => composers.flatMap(([co
     titles: [title, withoutParentheses(title), ...(recording?.titleAliases || [])],
   };
 })));
-const pool = catalogue.flatMap(track => recordingsForWork(track.id).map(recording => ({ ...track, recording })));
+const pool = catalogue.flatMap(track => playbackUnitsForWork(track.id).map(unit => ({
+  ...track, recording: unit.selectedPart === undefined ? unit : unit.sequence[unit.selectedPart],
+})));
 const creators = [...new Set(catalogue.map(track => track.composer))];
 const scopePeriods = [];
 let current;
@@ -69,6 +71,7 @@ let remaining = [];
 let choices = [];
 let selected = '';
 let result;
+let partIndex = 0;
 
 function shuffled(items) {
   const order = [...items];
@@ -175,7 +178,7 @@ function buildScope() {
     const choices = new Map();
     let count = 0;
     for (const [composer, works] of composers) {
-      const choice = scopeChoice(composer, works.reduce((total, [id]) => total + recordingsForWork(id).length, 0));
+      const choice = scopeChoice(composer, works.reduce((total, [id]) => total + playbackUnitsForWork(id).length, 0));
       count += choice.count;
       choices.set(composer, choice);
       list.append(choice.label);
@@ -260,6 +263,12 @@ function renderFeedback() {
   const work = mode === 'title' ? '' : current.work;
   $('quizWork').textContent = [work, current.recording.name].filter(Boolean).join(' · ');
   $('quizWork').hidden = !$('quizWork').textContent;
+  const sequence = current.recording.sequence;
+  $('quizPartControl').hidden = !sequence;
+  if (sequence) {
+    $('quizPart').replaceChildren(...sequence.map((part, index) => new Option(part.name, index)));
+    $('quizPart').value = String(partIndex);
+  }
   const background = workBackgrounds[current.id][language];
   $('quizAnswerComposer').textContent = background.composer;
   $('quizAnswerPeriod').textContent = periods[current.period][language];
@@ -304,6 +313,15 @@ function renderQuestion() {
   renderFeedback();
 }
 
+function setPart(index, play = false) {
+  partIndex = index;
+  const recording = current.recording.sequence?.[index] ?? current.recording;
+  $('quizAudioError').hidden = true;
+  audio.src = recording.src;
+  if (result && current.recording.sequence) $('quizPart').value = String(index);
+  if (play) audio.play().catch(() => { if (audio.error) $('quizAudioError').hidden = false; });
+}
+
 function nextQuestion() {
   if (!remaining.length) {
     remaining = shuffled(activePool);
@@ -321,9 +339,10 @@ function nextQuestion() {
   $('quizWork').textContent = '';
   for (const id of ['quizAnswerComposer', 'quizAnswerPeriod', 'quizAnswerYear']) $(id).textContent = '';
   for (const id of ['quizWorkBackground', 'quizWorkReport']) $(id).removeAttribute('href');
-  $('quizAudioError').hidden = true;
   audio.pause();
-  audio.src = current.recording.src;
+  setPart(0);
+  $('quizPart').replaceChildren();
+  $('quizPartControl').hidden = true;
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: tr('盲听片段', 'Blind listening excerpt'), artist: 'QE Listening List' });
   }
@@ -403,6 +422,13 @@ $('quizSettings').addEventListener('click', () => {
   setupForm.elements.namedItem('mode')[0].focus();
 });
 audio.addEventListener('error', () => { if (!round.hidden && audio.error) $('quizAudioError').hidden = false; });
+audio.addEventListener('ended', () => {
+  if (!round.hidden && current?.recording.sequence?.[partIndex + 1]) setPart(partIndex + 1, true);
+});
+$('quizPart').addEventListener('change', event => {
+  const index = Number(event.target.value);
+  if (result && current?.recording.sequence?.[index]) setPart(index, true);
+});
 $('quizLanguage').addEventListener('click', () => {
   language = language === 'en' ? 'zh' : 'en';
   savePreference('qe-language', language);

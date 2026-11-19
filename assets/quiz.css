@@ -192,3 +192,5 @@ html[data-theme=dark] .quiz-page {
 .quiz-answer-meta dt { font-size: 11px; color: var(--muted); }
 .quiz-answer-meta dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
 .quiz-answer-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.quiz-part-control { display: grid; gap: 6px; margin: 8px 0; font-size: 12px; }
+.quiz-part-control select { width: 100%; min-width: 0; padding: 7px; color: var(--ink); background: var(--paper); border: 1px solid var(--stroke); border-radius: 6px; }

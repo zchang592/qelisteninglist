@@ -8,8 +8,8 @@
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./assets/style.css?v=1.5.7">
   <link rel="stylesheet" href="./assets/editorial.css?v=1.5.7">
-  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.4">
-  <script type="module" src="./assets/quiz.js?v=1.6.4"></script>
+  <link rel="stylesheet" href="./assets/quiz.css?v=1.6.5">
+  <script type="module" src="./assets/quiz.js?v=1.6.5"></script>
 </head>
 <body class="quiz-page">
   <a class="skip-link" href="#quizMain" data-zh="跳到练习" data-en="Skip to practice">跳到练习</a>
@@ -82,6 +82,9 @@
           <p id="quizReason" hidden></p>
           <p id="quizSolution"></p>
           <p id="quizWork" hidden></p>
+          <div class="quiz-part-control" id="quizPartControl" hidden>
+            <label for="quizPart" data-zh="乐章 / 幕" data-en="Movement or act">乐章 / 幕</label><select id="quizPart"></select>
+          </div>
           <dl class="quiz-answer-meta">
             <div><dt data-zh="作曲家" data-en="Composer">作曲家</dt><dd id="quizAnswerComposer"></dd></div>
             <div><dt data-zh="时期" data-en="Period">时期</dt><dd id="quizAnswerPeriod"></dd></div>

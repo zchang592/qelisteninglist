@@ -2,6 +2,7 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './config.js';
 
 const INTRO={zh:'QE Listening List 是一个用于 QE 听辨练习的曲目资料库。浏览不需要账号。\n注册需要管理员提供的邀请码；登录后可以收藏作品、发表和回复评论。\n曲目根据提供的四份听辨清单整理，并不代表最终 QE 考试曲目库；请以官方通知为准。\nYouTube 链接由 AI 自动识别和寻找，仅供参考。不同录音可能有版本差异，尤其是中世纪和文艺复兴时期，请结合原始清单核对。\n如有任何问题，请联系 zchang592@gmail.com。',en:'QE Listening List is a listening library for QE preparation. You can browse without an account.\nRegistration requires an invitation code from the administrator. Sign in to save favorites and join the discussion.\nThe library was assembled from four supplied listening lists and is not the final QE examination repertoire. Please refer to official notices.\nYouTube links were identified and found using AI and are for reference only. Recordings may differ, especially for Medieval and Renaissance works; check them against the original list.\nFor questions, contact zchang592@gmail.com.'};
 const translations={
+ '乐章 / 幕':'Movement or act','从序幕播放全剧':'Play complete opera from the prologue',
  '曲目背景':'Work background','反馈':'Report','曲目反馈':'Work report','管理员消息':'Administrator messages',
  '评论、回复和私人反馈汇集在这里。删除的消息可以从本机回收站恢复。':'Comments, replies, and private reports appear here. Deleted notices can be restored from this browser’s trash.',
  '请登录后向管理员发送反馈。':'Sign in to send feedback to the administrator.',

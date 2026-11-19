@@ -1,5 +1,5 @@
 import { icon } from './icons.js?v=1.6.4';
-import { recordingsForWork, recordingAlbums } from './local-recordings.js?v=1.6.3';
+import { playbackUnitsForWork, recordingAlbums } from './local-recordings.js?v=1.6.5';
 import { createVisualizer } from './player-visualizer.js?v=1.6.0';
 
 function normalize(text) {
@@ -39,12 +39,12 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     return [name.slice(0, firstChinese).trim(), name.slice(firstChinese)];
   });
   const tracks = data.flatMap(([period, composers], periodIndex) => composers.flatMap(([composer, works]) => works.flatMap(([id, fullText]) => {
-    const recordings = recordingsForWork(id);
+    const recordings = playbackUnitsForWork(id);
     const workTitle = fullText.split(' — ').slice(1).join(' — ') || fullText;
     return (recordings.length ? recordings : [undefined]).map(recording => ({
       id, composer, periodIndex, recording,
       title: [workTitle, recording?.name].filter(Boolean).join(' · '),
-      searchable: normalize(`${period} ${composer} ${fullText} ${recording?.name || ''}`),
+      searchable: normalize(`${period} ${composer} ${fullText} ${recording?.name || recording?.sequence?.map(part => part.name).join(' ') || ''}`),
     }));
   })));
   const onSite = tracks.filter(track => track.recording);
@@ -61,10 +61,13 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
   let queue = [...onSite];
   let current = queue[0];
   let loaded;
+  let partIndex = 0;
+  let loopFrom = 0;
   let shuffled = false;
   let repeat = 'off';
   let playRequest = 0;
   let favoriteViewSignature = '';
+  const activeRecording = () => current?.recording.sequence?.[partIndex] ?? current?.recording;
 
   function label(control, name) {
     control.setAttribute('aria-label', name);
@@ -140,10 +143,11 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     meta.textContent = `${String(track.id).padStart(2, '0')} · ${byline.join(' · ')}`;
     identity.append(title, meta);
     action.append(symbol, identity);
-    if (track.recording?.duration) {
+    const seconds = track.recording?.sequence?.reduce((total, part) => total + part.duration, 0) ?? track.recording?.duration;
+    if (seconds) {
       const duration = document.createElement('span');
       duration.className = 'player-row-duration';
-      duration.textContent = formatTime(track.recording.duration);
+      duration.textContent = formatTime(seconds);
       action.append(duration);
     }
     const actions = document.createElement('div');
@@ -277,7 +281,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
 
   function renderTime() {
     const durationKnown = loaded === current && Number.isFinite(audio.duration) && audio.duration > 0;
-    const duration = durationKnown ? audio.duration : current?.recording.duration || 0;
+    const duration = durationKnown ? audio.duration : activeRecording()?.duration || 0;
     const elapsed = durationKnown ? audio.currentTime : 0;
     seek.disabled = !durationKnown;
     seek.max = String(duration || 1);
@@ -289,6 +293,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
 
   function renderPlayback() {
     const playing = !audio.paused && !audio.ended;
+    audio.loop = repeat === 'one' && !current?.recording.sequence;
     const position = queue.indexOf(current);
     $('playerVisual').classList.toggle('is-playing', playing);
     const status = playing ? tr('正在播放', 'Now playing') : tr('待播放', 'Ready to play');
@@ -317,7 +322,16 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     $('playerNowTitle').textContent = title;
     $('playerBarTitle').textContent = title;
     $('playerNowByline').textContent = current ? `${current.composer} · ${periodName(current.periodIndex)}` : '';
-    $('playerBarByline').textContent = current?.composer || '';
+    const sequence = current?.recording.sequence;
+    const part = sequence?.[partIndex];
+    $('playerBarByline').textContent = [current?.composer, part?.name].filter(Boolean).join(' · ');
+    $('playerSequence').hidden = !sequence;
+    if (sequence) {
+      const partSelect = $('playerPart');
+      partSelect.replaceChildren(...sequence.map((item, index) => new Option(`${item.name} · ${formatTime(item.duration)}`, index)));
+      partSelect.value = String(partIndex);
+      $('playerPlayComplete').hidden = !current.recording.selectedPart;
+    }
     $('playerCredit').textContent = current?.recording.credit || '';
     $('playerCredit').hidden = !current?.recording.credit;
     const favorite = $('playerFavorite');
@@ -335,7 +349,6 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
 
   function clearPlaybackError() {
     $('playerError').hidden = true;
-    $('playerBarByline').textContent = current?.composer || '';
   }
 
   function showPlaybackError() {
@@ -346,13 +359,14 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     renderPlayback();
   }
 
-  async function playTrack(track) {
+  async function playTrack(track, index = loaded === track && !audio.ended ? partIndex : track?.recording.selectedPart ?? 0) {
     if (!track) return;
     const request = ++playRequest;
     current = track;
-    if (loaded !== track || audio.error) {
+    if (loaded !== track || partIndex !== index || audio.error) {
       loaded = track;
-      audio.src = track.recording.src;
+      partIndex = index;
+      audio.src = activeRecording().src;
     }
     clearPlaybackError();
     renderCurrent();
@@ -362,6 +376,12 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     } catch (error) {
       if (request === playRequest && error.name !== 'AbortError') showPlaybackError();
     }
+  }
+
+  function startTrack(track, index = track.recording.selectedPart ?? 0) {
+    loopFrom = index;
+    if (loaded === track && index === partIndex && Number.isFinite(audio.duration)) audio.currentTime = 0;
+    playTrack(track, index);
   }
 
   function pause() {
@@ -374,14 +394,13 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     queueSource = items;
     queue = shuffled ? shuffleTracks(items.filter(track => track !== first)) : [...items];
     if (shuffled && first) queue.unshift(first);
-    if (loaded === (first || queue[0]) && Number.isFinite(audio.duration)) audio.currentTime = 0;
-    playTrack(first || queue[0]);
+    startTrack(first || queue[0]);
   }
 
   function advance(direction) {
     const position = queue.indexOf(current);
     if (queue[position + direction]) {
-      playTrack(queue[position + direction]);
+      startTrack(queue[position + direction]);
       return;
     }
     if (repeat !== 'all' || !queue.length) return;
@@ -390,8 +409,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
       if (queue[0] === current) [queue[0], queue[1]] = [queue[1], queue[0]];
     }
     const next = direction > 0 ? queue[0] : queue.at(-1);
-    if (next === current && loaded === current) audio.currentTime = 0;
-    playTrack(next);
+    startTrack(next);
   }
 
   function fillQueueList(list, items, selectTrack) {
@@ -412,7 +430,7 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
     $('playerQueueCount').textContent = tr(`第 ${queue.indexOf(current) + 1} 首 / 共 ${queue.length} 首`, `Track ${queue.indexOf(current) + 1} of ${queue.length}`);
     fillQueueList($('playerQueueList'), queue, track => {
       queueDialog.close();
-      playTrack(track);
+      startTrack(track);
     });
   }
 
@@ -446,7 +464,8 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
 
   function renderLanguage() {
     document.title = `QE Listening List · ${tr('聆听室', 'Listening room')}`;
-    $('playerLibraryCount').textContent = tr(`${tracks.length} 首作品，${data.length} 个时期`, `${tracks.length} works across ${data.length} periods`);
+    const works = new Set(tracks.map(track => track.id)).size;
+    $('playerLibraryCount').textContent = tr(`${works} 首作品，${data.length} 个时期`, `${works} works across ${data.length} periods`);
     search.setAttribute('aria-label', tr('搜索曲目', 'Search works'));
     label($('playerPrevious'), tr('上一首', 'Previous track'));
     label($('playerNext'), tr('下一首', 'Next track'));
@@ -472,7 +491,12 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
   group.addEventListener('change', resetGroupsAndRender);
   audioOnly.addEventListener('change', resetGroupsAndRender);
   playSelection.addEventListener('click', () => beginQueue(selection));
-  playButton.addEventListener('click', () => audio.paused || audio.ended ? playTrack(current) : pause());
+  playButton.addEventListener('click', () => {
+    if (!current) return;
+    if (audio.ended) startTrack(current);
+    else if (audio.paused) playTrack(current);
+    else pause();
+  });
   $('playerPrevious').addEventListener('click', () => {
     if (loaded === current && (audio.currentTime > 3 || (queue[0] === current && repeat !== 'all'))) audio.currentTime = 0;
     else advance(-1);
@@ -486,7 +510,6 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
   });
   $('playerRepeat').addEventListener('click', () => {
     repeat = { off: 'all', all: 'one', one: 'off' }[repeat];
-    audio.loop = repeat === 'one';
     renderPlayback();
   });
   seek.addEventListener('input', () => { if (!seek.disabled) audio.currentTime = Number(seek.value); });
@@ -509,7 +532,17 @@ export function buildPlayer({ data, favorites, openComments, openAuth, workDetai
   $('playerDiscuss').addEventListener('click', () => { if (current) openComments(current.id); });
   $('playerBackground').addEventListener('click', () => { if (current) workDetails.openBackground(current.id); });
   $('playerReport').addEventListener('click', () => { if (current) workDetails.openReport(current.id); });
-  audio.addEventListener('ended', () => { renderPlayback(); if (!audio.loop) advance(1); });
+  $('playerPart').addEventListener('change', event => {
+    const index = Number(event.target.value);
+    if (current?.recording.sequence?.[index]) playTrack(current, index);
+  });
+  $('playerPlayComplete').addEventListener('click', () => { if (current?.recording.sequence) startTrack(current, 0); });
+  audio.addEventListener('ended', () => {
+    renderPlayback();
+    if (current?.recording.sequence?.[partIndex + 1]) playTrack(current, partIndex + 1);
+    else if (current?.recording.sequence && repeat === 'one') startTrack(current, loopFrom);
+    else if (!audio.loop) advance(1);
+  });
   for (const event of ['play', 'pause', 'playing']) audio.addEventListener(event, renderPlayback);
   for (const event of ['loadedmetadata', 'timeupdate', 'durationchange']) audio.addEventListener(event, renderTime);
   audio.addEventListener('error', () => { if (audio.error) showPlaybackError(); });

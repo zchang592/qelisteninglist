@@ -230,6 +230,9 @@ body.player-page .topbar { padding-inline: var(--player-padding); }
 .player-visual.is-playing + .player-now-info .player-now-state::before { background: var(--green); }
 .player-now-info h2 { margin: 0; font: 400 clamp(24px, 2.4vw, 34px)/1.13 'Instrument Serif', Georgia, serif; }
 .player-now-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.player-sequence { display: grid; gap: 6px; margin-top: 12px; font-size: 12px; }
+.player-sequence select { width: 100%; min-width: 0; padding: 7px; color: var(--ink); background: var(--paper); border: 1px solid var(--stroke); border-radius: 6px; }
+.player-sequence button { justify-self: start; }
 .player-now-info .player-error { margin-top: 10px; color: var(--accent); }
 
 .player-transport {

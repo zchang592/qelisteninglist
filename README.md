@@ -64,4 +64,6 @@ The independent editorial entrance is `home.html`. The original site URL and `in
 
 All recordings live under `assets/audio/` on the `site-audio` branch of this repository. `assets/local-recordings.js` pins the audio commit and lists named excerpts under `parts`. The library, listening room, and blind practice stream the recordings on demand. Favorites and discussion are keyed by the original work ID.
 
+The manifest's ordered `sequence` entries play as one work, with a movement or act selector. For Peter Grimes, `selectedPart` opens Act I by default and limits blind practice to Act I. The library and listening room also offer playback from the prologue.
+
 Explicitly selected excerpts are catalogued in `assets/work-parts.js`; complete works stay together. The review and unresolved scope questions are in `docs/multi-part-audit.md`. Generate the preferred YouTube lists with `node scripts/generate-first-choice.mjs`.
